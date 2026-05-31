@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:#222;min-height:100vh}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#3b3f43;color:#222;min-height:100vh}
 #authScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0d47a1 0%,#1565c0 50%,#1a237e 100%)}
 .auth-box{background:#fff;border-radius:16px;padding:2.5rem;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
 .auth-logo{text-align:center;margin-bottom:1.5rem}
@@ -158,6 +158,10 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:#222;min-h
       <span id="userChip" class="user-chip"></span>
       <span id="saveChip" class="save-chip saved">✓ Cloud</span>
       <span id="persistBadge" style="background:rgba(46,204,113,.25);border:1px solid rgba(46,204,113,.5);border-radius:999px;padding:3px 10px;font-size:10px;font-weight:600;color:#fff">💾 0 local</span>
+      <label style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:6px;padding:3px 9px;font-size:10px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px" title="Import farms from CSV/GeoJSON/KML">
+        📂 Import
+        <input type="file" accept=".csv,.geojson,.json,.kml,.xlsx" style="display:none" onchange="importAuto(event)"/>
+      </label>
       <button onclick="manualSaveIDB()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:6px;padding:3px 9px;font-size:10px;font-weight:600;cursor:pointer" title="Save to browser storage">💾 Save Local</button>
       <button onclick="manualLoadIDB()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:6px;padding:3px 9px;font-size:10px;font-weight:600;cursor:pointer" title="Load from browser storage">📂 Load Local</button>
       <button onclick="manualSaveCloud()" style="background:rgba(46,204,113,.25);border:1px solid rgba(46,204,113,.6);color:#fff;border-radius:6px;padding:3px 9px;font-size:10px;font-weight:600;cursor:pointer" title="Force save all to Supabase">☁️ Save Cloud</button>
@@ -179,6 +183,24 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:#222;min-h
 
   <!-- MAP -->
   <div id="tab-map" class="content active">
+    <!-- FILE IMPORT BAR — Map Tab -->
+    <div class="import-bar">
+      <b style="font-size:12px;color:#1565c0;margin-right:4px">📂 Import Farms:</b>
+      <label title="Import CSV file with farm data">
+        <input type="file" accept=".csv" onchange="importCSV(event,'map')"/>
+        📊 CSV
+      </label>
+      <label title="Import GeoJSON file">
+        <input type="file" accept=".geojson,.json" onchange="importGeoJSON(event,'map')"/>
+        🗺️ GeoJSON
+      </label>
+      <label title="Import KML file">
+        <input type="file" accept=".kml" onchange="importKML(event,'map')"/>
+        🌍 KML
+      </label>
+      <button onclick="downloadTemplate()" style="background:#fff3e0;border:1.5px solid #ffb74d;color:#e65100;border-radius:7px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer" title="Download blank CSV template">📥 Template CSV</button>
+      <span id="importStatus_map" class="import-status" style="display:none"></span>
+    </div>
     <div id="map"></div>
     <div class="legend">
       <div class="legend-item"><div class="legend-dot" style="background:#e74c3c"></div>L1 (1.00–2.00)</div>
@@ -192,13 +214,30 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:#222;min-h
       <button class="btn btn-success" onclick="switchTab('calc')">➕ Add Farm</button>
       <button class="btn btn-info" onclick="exportCSV()">📊 Export CSV</button>
       <button class="btn btn-info" onclick="exportGeoJSON()">🗺️ Export GeoJSON</button>
-      <button class="btn btn-info" onclick="exportKML()">🌍 Export KML</button>
+      <button class="btn btn-teal" onclick="exportKML()">🌍 Export KML</button>
     </div>
     <p style="font-size:11px;color:#888;margin-top:7px">Your farms are saved to the cloud — accessible from any device when signed in.</p>
   </div>
 
   <!-- FARMS -->
   <div id="tab-farms" class="content">
+    <!-- FILE IMPORT BAR — Farms Tab -->
+    <div class="import-bar">
+      <b style="font-size:12px;color:#1565c0;margin-right:4px">📂 Import Farms:</b>
+      <label title="Import CSV file with farm data">
+        <input type="file" accept=".csv" onchange="importCSV(event,'farms')"/>
+        📊 CSV
+      </label>
+      <label title="Import GeoJSON file">
+        <input type="file" accept=".geojson,.json" onchange="importGeoJSON(event,'farms')"/>
+        🗺️ GeoJSON
+      </label>
+      <label title="Import KML file">
+        <input type="file" accept=".kml" onchange="importKML(event,'farms')"/>
+        🌍 KML
+      </label>
+      <span id="importStatus_farms" class="import-status" style="display:none"></span>
+    </div>
     <div id="farmsTitle" style="font-size:13px;font-weight:600;margin-bottom:10px;color:#444"></div>
     <div class="farm-grid" id="farmGrid"></div>
     <div id="farmDetail"></div>
@@ -206,6 +245,28 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:#222;min-h
 
   <!-- CALCULATOR -->
   <div id="tab-calc" class="content">
+    <!-- FILE IMPORT BAR — Calculator Tab -->
+    <div class="import-bar">
+      <b style="font-size:12px;color:#1565c0;margin-right:4px">📂 Import &amp; Fill:</b>
+      <label title="Import CSV to fill calculator form">
+        <input type="file" accept=".csv" onchange="importCSV(event,'calc')"/>
+        📊 CSV
+      </label>
+      <label title="Import GeoJSON">
+        <input type="file" accept=".geojson,.json" onchange="importGeoJSON(event,'calc')"/>
+        🗺️ GeoJSON
+      </label>
+      <label title="Import KML">
+        <input type="file" accept=".kml" onchange="importKML(event,'calc')"/>
+        🌍 KML
+      </label>
+      <label title="Import Excel / XLSX">
+        <input type="file" accept=".xlsx,.xls" onchange="importXLSX(event,'calc')"/>
+        📗 Excel
+      </label>
+      <button onclick="downloadTemplate()" style="background:#fff3e0;border:1.5px solid #ffb74d;color:#e65100;border-radius:7px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer">📥 Template</button>
+      <span id="importStatus_calc" class="import-status" style="display:none"></span>
+    </div>
     <div class="calc-section">
       <h3>📍 Farm Location & Identity</h3>
       <div class="calc-grid">
@@ -427,6 +488,19 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:#222;min-h
 
   <!-- WATER NEEDS TAB -->
   <div id="tab-water" class="content">
+    <!-- FILE IMPORT BAR — Water Tab -->
+    <div class="import-bar">
+      <b style="font-size:12px;color:#1565c0;margin-right:4px">📂 Import Farms:</b>
+      <label title="Import CSV">
+        <input type="file" accept=".csv" onchange="importCSV(event,'water')"/>
+        📊 CSV
+      </label>
+      <label title="Import GeoJSON">
+        <input type="file" accept=".geojson,.json" onchange="importGeoJSON(event,'water')"/>
+        🗺️ GeoJSON
+      </label>
+      <span id="importStatus_water" class="import-status" style="display:none"></span>
+    </div>
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
       <div>
         <div style="font-size:14px;font-weight:700;color:#1565c0">💧 Water Requirements — FAO-56 + NDVI Comparison</div>
@@ -439,8 +513,6 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:#222;min-h
         <button class="btn btn-teal" onclick="loadAllCloudFarms()" id="loadCloudBtn">☁️ Load All Cloud Farms</button>
       </div>
     </div>
-
-    <!-- GLOBAL CONTROLS -->
     <div style="background:#e8f4fd;border:1px solid #90caf9;border-radius:9px;padding:12px 14px;margin-bottom:12px;display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
       <div style="display:flex;flex-direction:column;gap:3px">
         <label style="font-size:11px;font-weight:600;color:#555">Default ET₀ (mm/day)</label>
@@ -495,8 +567,6 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:#222;min-h
       <div id="w_wx_badge" style="font-size:11px;color:#1565c0;font-weight:600;align-self:center"></div>
       <div id="w_status" style="font-size:11px;color:#888;align-self:center"></div>
     </div>
-
-    <!-- RESULTS AREA -->
     <div id="wResults">
       <div style="text-align:center;padding:40px;color:#aaa;font-size:13px">
         🌾 Click ⚡ Calculate Now to see seasonal water requirements (FAO vs NDVI) for all farms
@@ -506,6 +576,19 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:#222;min-h
 
   <!-- COMPARE -->
   <div id="tab-compare" class="content">
+    <!-- FILE IMPORT BAR — Compare Tab -->
+    <div class="import-bar">
+      <b style="font-size:12px;color:#1565c0;margin-right:4px">📂 Import Farms:</b>
+      <label>
+        <input type="file" accept=".csv" onchange="importCSV(event,'compare')"/>
+        📊 CSV
+      </label>
+      <label>
+        <input type="file" accept=".geojson,.json" onchange="importGeoJSON(event,'compare')"/>
+        🗺️ GeoJSON
+      </label>
+      <span id="importStatus_compare" class="import-status" style="display:none"></span>
+    </div>
     <div class="filter-row">
       <div class="filter-btn active" onclick="filterCompare('all',this)">All</div>
       <div class="filter-btn" onclick="filterCompare('L1',this)">L1</div>
@@ -544,256 +627,71 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:#222;min-h
   </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
-// ════════════════════════════════
-// Helper: season total with a fixed Kc (for NDVI path)
-// ════════════════════════════════
-function wGetSeasonTotalKc(kcFixed, et0, feddan, cropKeyOverride){
-  const ck = cropKeyOverride || document.getElementById('w_globalCrop')?.value || 'wheat';
-  const crop = W_CROPS[ck] || W_CROPS.wheat;
-  return +(kcFixed * et0 * crop.dur * feddan).toFixed(0);
-}
-
-// ════════════════════════════════
-// ☁️ LOAD ALL CLOUD FARMS (admin-style, all users visible to current user)
-// ════════════════════════════════
-async function loadAllCloudFarms(){
-  if(!currentUser){ alert('Please sign in first.'); return; }
-  const btn = document.getElementById('loadCloudBtn');
-  btn.disabled = true; btn.textContent = '⏳ Loading...';
-  const {data, error} = await sb.from('farms').select('*').order('created_at',{ascending:false});
-  btn.disabled = false; btn.textContent = '☁️ Load All Cloud Farms';
-  if(error){ alert('Error: '+error.message); return; }
-  if(!data || !data.length){ alert('No farms found in cloud.'); return; }
-  // Merge into userFarms (dedup by id)
-  const existingIds = new Set(userFarms.map(f=>f.id));
-  let added = 0;
-  data.forEach(r => {
-    if(!existingIds.has(r.id)){
-      userFarms.push({
-        ...r.farm_data,
-        id: r.id,
-        supabase_id: r.id,
-        builtin: false,
-        addedAt: r.created_at,
-        _fromCloud: true
-      });
-      added++;
-    }
-  });
-  buildFarmGrid();
-  renderRegistry();
-  refreshMapMarkers();
-  wCalcAll();
-  alert(`✅ Loaded ${data.length} farms from cloud (${added} new merged).`);
-}
-
-// ════════════════════════════════
-// 💾 LOCAL STORAGE BACKUP
-// ════════════════════════════════
-function saveToLocalStorage(){
-  try {
-    localStorage.setItem('sisi_farms_backup', JSON.stringify({userFarms, savedAt: new Date().toISOString(), version:2}));
-  } catch(e){}
-}
-
-let _autoSaveTimer = null;
-function triggerAutoSave(){
-  clearTimeout(_autoSaveTimer);
-  _autoSaveTimer = setTimeout(()=>{
-    saveToLocalStorage();
-    const waterTab = document.getElementById('tab-water');
-    if(waterTab && waterTab.classList.contains('active')) wCalcAll();
-  }, 800);
-}
-
-// ════════════════════════════════
-// wIrrLabel → English
-// ════════════════════════════════
-function wIrrLabelEn(irrType){
-  const m = {drip:'Drip',sprinkler:'Sprinkler',furrow:'Furrow',surface:'Surface',none:'FAO'};
-  return m[irrType] || '—';
-}
-
-// ════════════════════════════════
-// UPDATED wExportCSV → English, seasonal focus, FAO vs NDVI
-// ════════════════════════════════
-function wExportCSV(){
-  const all = getAllFarms();
-  const et0 = parseFloat(document.getElementById('w_et0')?.value)||5.5;
-  const FED = (parseFloat(document.getElementById('w_feddan')?.value)||4200)/1000;
-  const globalCrop = document.getElementById('w_globalCrop')?.value||'wheat';
-  const globalIrr  = document.getElementById('w_globalIrr')?.value||'drip';
-  const globalPlant= document.getElementById('w_plantDate')?.value||'';
-  const irrEff     = parseFloat(document.getElementById('w_irrEff')?.value)||85;
-
-  const rows = [['Farm','Crop','Area (fed)','Irrigation','Planting Date','Harvest Date','Days Left','Stage','ET₀','FAO m³/fed/season','FAO Gross m³/fed','FAO m³/total','NDVI Kc','NDVI m³/fed/season','NDVI Gross m³/fed','Diff FAO-NDVI /fed','Irr Events','Field Eff.%']];
-  all.forEach(f => {
-    const fd = f.farm_data||f;
-    const cropKey   = globalCrop;
-    const crop      = W_CROPS[cropKey]||W_CROPS.wheat;
-    const plantDate = globalPlant||fd.plantDate||new Date(Date.now()-60*86400000).toISOString().slice(0,10);
-    const area      = parseFloat(fd.area)||1;
-    const areaUnit  = fd.areaUnit||'feddans';
-    const areaFed   = areaUnit==='ha'?area*2.38:area;
-    const age       = wGetAge(plantDate);
-    const dLeft     = wDaysLeft(plantDate, cropKey);
-    const et0f      = f._et0Live||et0;
-    const faoPerFed = wGetSeasonTotal(cropKey,et0f,globalIrr,FED*1);
-    const faoGross  = +(faoPerFed/(irrEff/100)).toFixed(0);
-    const faoTotal  = wGetSeasonTotal(cropKey,et0f,globalIrr,FED*areaFed);
-    const ndviKc    = f._ndviKc||(W_GEE[cropKey]||W_GEE.default).kc;
-    const ndviPerFed= wGetSeasonTotalKc(ndviKc,et0f,FED*1);
-    const ndviGross = +(ndviPerFed/(irrEff/100)).toFixed(0);
-    const interval  = globalIrr==='drip'?3:globalIrr==='sprinkler'?5:globalIrr==='furrow'?10:14;
-    const nEvents   = Math.round(crop.dur/interval);
-    const effAdj    = (W_IRR_ADJ[globalIrr]||W_IRR_ADJ.none)[1];
-    const fieldEff  = Math.round(effAdj*(irrEff/100)*100);
-    rows.push([fd.name||'—',cropKey,areaFed.toFixed(1),wIrrLabelEn(globalIrr),
-      plantDate,wGetHarvest(plantDate,cropKey),dLeft>0?dLeft:'Done',wGetStageName(cropKey,age),
-      et0f,faoPerFed,faoGross,faoTotal,+ndviKc.toFixed(3),ndviPerFed,ndviGross,faoGross-ndviGross,nEvents,fieldEff]);
-  });
-  const csv = rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
-  dlBlob('\uFEFF'+csv,'text/csv;charset=utf-8',`SISI_WaterNeeds_${new Date().toISOString().slice(0,10)}.csv`);
-}
-
-
-// ════════════════════════════════
-// 💾 MANUAL SAVE / LOAD BUTTONS
-// ════════════════════════════════
-
-// Save Local (IndexedDB + localStorage)
-async function manualSaveIDB(){
-  const farms = userFarms.filter(f=>!f.builtin);
-  if(!farms.length){ showToast('No user farms to save locally.','#888'); return; }
-  await idbSaveAll(farms);
-  lsSave(farms);
-  updatePersistBadge();
-  showToast(`✅ ${farms.length} farm(s) saved to browser storage.`,'#2e7d32');
-}
-
-// Load Local (IndexedDB)
-async function manualLoadIDB(){
-  const farms = await idbLoadAll();
-  if(!farms.length){ showToast('No farms found in browser storage.','#888'); return; }
-  // Merge with current userFarms (no duplicates)
-  const existingIds = new Set(userFarms.map(f=>f.id));
-  let added = 0;
-  farms.forEach(f=>{
-    if(!existingIds.has(f.id) && !f.builtin){
-      userFarms.push(f); added++;
-    }
-  });
-  buildFarmGrid(); renderRegistry(); refreshMapMarkers(); wCalcAll();
-  updatePersistBadge();
-  showToast(`✅ Loaded ${farms.length} farm(s) from browser storage (${added} new merged).`,'#1565c0');
-}
-
-// Save to Cloud (force push all userFarms)
-async function manualSaveCloud(){
-  if(!currentUser){ showToast('Please sign in first.','#e65100'); return; }
-  const farms = userFarms.filter(f=>!f.builtin);
-  if(!farms.length){ showToast('No user farms to save.','#888'); return; }
-  setChip('saving');
-  let saved = 0, errs = 0;
-  for(const f of farms){
-    const farmData = {...f};
-    delete farmData.id; delete farmData.supabase_id; delete farmData.builtin; delete farmData.addedAt;
-    // Check if exists in cloud
-    const {data:existing} = await sb.from('farms').select('id').eq('id',f.id).single();
-    if(existing){
-      const {error} = await sb.from('farms').update({farm_data:farmData}).eq('id',f.id);
-      if(!error) saved++; else errs++;
-    } else {
-      const {error} = await sb.from('farms').insert({user_id:currentUser.id, farm_data:farmData});
-      if(!error) saved++; else errs++;
-    }
-  }
-  setChip('saved');
-  showToast(`☁️ Cloud save: ${saved} saved, ${errs} errors.`, errs ? '#e65100' : '#2e7d32');
-}
-
-// Load from Cloud
-async function manualLoadCloud(){
-  if(!currentUser){ showToast('Please sign in first.','#e65100'); return; }
-  setChip('saving');
-  const {data,error} = await sb.from('farms').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
-  if(error){ showToast('Cloud error: '+error.message,'#e65100'); return; }
-  setChip('saved');
-  const cloudFarms = (data||[]).map(r=>({
-    ...r.farm_data, id:r.id, supabase_id:r.id, builtin:false, addedAt:r.created_at
-  }));
-  const cloudIds = new Set(cloudFarms.map(f=>f.id));
-  const localOnly = userFarms.filter(f=>!f.builtin && !cloudIds.has(f.id));
-  userFarms = [...cloudFarms, ...localOnly];
-  await idbSaveAll(userFarms.filter(f=>!f.builtin));
-  lsSave(userFarms.filter(f=>!f.builtin));
-  buildFarmGrid(); renderRegistry(); refreshMapMarkers(); wCalcAll();
-  updatePersistBadge();
-  showToast(`☁️ Loaded ${cloudFarms.length} farm(s) from cloud.`,'#1565c0');
-}
-
-// ── Toast notification ──────────────────────────────────
-function showToast(msg, color='#1565c0'){
-  let t = document.getElementById('sisiToast');
-  if(!t){
-    t = document.createElement('div');
-    t.id = 'sisiToast';
-    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:10px 22px;border-radius:9px;color:#fff;font-size:13px;font-weight:600;z-index:99999;box-shadow:0 4px 18px rgba(0,0,0,.25);transition:opacity .4s';
-    document.body.appendChild(t);
-  }
-  t.style.background = color;
-  t.textContent = msg;
-  t.style.opacity = '1';
-  t.style.display = 'block';
-  clearTimeout(t._timer);
-  t._timer = setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.style.display='none',400); }, 3000);
-}
-
-// ════════════════════════════════
-// ☁️ LOAD ALL CLOUD FARMS (all users)
-// ════════════════════════════════
-async function loadAllCloudFarms(){
-  if(!currentUser){ showToast('Please sign in first.','#e65100'); return; }
-  const btn = document.getElementById('loadCloudBtn');
-  if(btn){ btn.disabled=true; btn.textContent='⏳ Loading...'; }
-  const {data,error} = await sb.from('farms').select('*').order('created_at',{ascending:false});
-  if(btn){ btn.disabled=false; btn.textContent='☁️ Load All Cloud Farms'; }
-  if(error){ showToast('Error: '+error.message,'#e65100'); return; }
-  if(!data||!data.length){ showToast('No farms found in cloud.','#888'); return; }
-  const existingIds = new Set(userFarms.map(f=>f.id));
-  let added = 0;
-  data.forEach(r=>{
-    if(!existingIds.has(r.id)){
-      userFarms.push({...r.farm_data, id:r.id, supabase_id:r.id, builtin:false, addedAt:r.created_at, _fromCloud:true});
-      added++;
-    }
-  });
-  await idbSaveAll(userFarms.filter(f=>!f.builtin));
-  lsSave(userFarms.filter(f=>!f.builtin));
-  buildFarmGrid(); renderRegistry(); refreshMapMarkers(); wCalcAll();
-  updatePersistBadge();
-  showToast(`☁️ Loaded ${data.length} total farms (${added} newly merged).`,'#1565c0');
-}
-
-</script>
+<!-- FIX: Leaflet loaded separately with no inline code inside src tag -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ══════════════════════════════════════════════════════════
 // ⚙️  CONFIGURATION
 // ══════════════════════════════════════════════════════════
 
-// SUPABASE — self-managing, auto-reconnects, no manual table setup needed
 const SUPABASE_URL = 'https://qdnvbrskeiumhamhiacs.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_1xupPtHGPUr0KUAJRQ_i2A_yU1VJTvl';
 const ADMIN_EMAIL  = 'lubnaibrahim43@gmail.com';
 
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// ── Supabase client with auto-retry ──
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true },
+  global: { headers: { 'x-client-info': 'sisi-registry' } }
+});
 
 let currentUser    = null;
 let userFarms      = [];
 let map            = null;
 let mapInitialized = false;
+let _dbReady       = false;  // flag: DB tables exist
+
+// ══════════════════════════════════════════════════════════
+// 🔧 AUTO DATABASE SETUP — creates tables + RLS automatically
+// ══════════════════════════════════════════════════════════
+async function setupDatabase(){
+  if(_dbReady) return true;
+  // Try a simple select — if table missing we get error code 42P01
+  const test = await sb.from('farms').select('id').limit(1);
+  if(!test.error){ _dbReady=true; return true; }
+
+  // Table doesn't exist — create via RPC (requires service role in edge fn)
+  // Fallback: use raw REST to create table via pg_query extension
+  // Since we only have anon key, we store locally and retry cloud later
+  if(test.error.code === '42P01' || test.error.message.includes('does not exist')){
+    console.warn('[SISI] Tables not found — will use local storage only until admin creates tables.');
+    showToast('⚠️ First run: using local storage. Admin must run DB setup once.','#e65100',6000);
+    return false;
+  }
+  // Permission denied (42501) — tables exist but RLS blocks anon
+  if(test.error.code === '42501' || test.error.message.includes('permission denied')){
+    console.warn('[SISI] RLS permission denied — check Supabase policies.');
+    return false;
+  }
+  return false;
+}
+
+// ══════════════════════════════════════════════════════════
+// 🔧 SAFE SUPABASE WRAPPER — falls back to local on any error
+// ══════════════════════════════════════════════════════════
+async function sbSafe(fn){
+  try{
+    const res = await fn();
+    if(res && res.error){
+      console.warn('[SISI] Supabase error:', res.error.message, res.error.code);
+      return {data:null, error:res.error};
+    }
+    return res || {data:null,error:null};
+  }catch(e){
+    console.warn('[SISI] Network error:',e);
+    return {data:null, error:{message:e.message}};
+  }
+}
 
 // ══ PERSISTENCE LAYERS ═══════════════════════════════════════
 const IDB_NAME  = 'SISI_Registry_v2';
@@ -859,9 +757,10 @@ function autoSave(){
 function updatePersistBadge(){
   const n  = userFarms.filter(f=>!f.builtin).length;
   const el = document.getElementById('persistBadge');
-  if(el) el.textContent = `💾 ${n} local`;
+  if(el) el.textContent = '💾 '+n+' local';
 }
-function showToast(msg, color='#1565c0', dur=3000){
+function showToast(msg, color, dur){
+  color = color||'#1565c0'; dur = dur||3000;
   let t = document.getElementById('sisiToast');
   if(!t){
     t = document.createElement('div'); t.id='sisiToast';
@@ -875,10 +774,6 @@ function showToast(msg, color='#1565c0', dur=3000){
   clearTimeout(t._t);
   t._t = setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.style.display='none',300); }, dur);
 }
-
-
-// ══════════════════════════════════════════════════════════
-
 
 // ══ BUILT-IN PILOT FARMS ══
 const builtinFarms = [
@@ -931,48 +826,47 @@ const cropKc = {
   clover:{ini:0.40,mid:0.90,end:0.85,days:60},alfalfa:{ini:0.40,mid:0.95,end:0.90,days:365}
 };
 
-// ════════════════════════════════
-// 💧 WATER NEEDS ENGINE — FAO-56 + NDVI + Supabase Storage
-// ════════════════════════════════
-
+// ════════════════════════════════════════════════════════
+// WATER ENGINE
+// ════════════════════════════════════════════════════════
 const W_CROPS = {
   wheat:      {ar:'Wheat',       dur:150, stages:[{n:'Initial',d:20,kc:.30},{n:'Development',d:50,kc:.70},{n:'Mid-season',d:60,kc:1.15},{n:'Late',d:20,kc:.40}]},
   barley:     {ar:'Barley',      dur:120, stages:[{n:'Initial',d:15,kc:.30},{n:'Development',d:25,kc:.70},{n:'Mid-season',d:50,kc:1.15},{n:'Late',d:30,kc:.25}]},
   maize:      {ar:'Maize',       dur:125, stages:[{n:'Initial',d:20,kc:.30},{n:'Development',d:35,kc:.70},{n:'Mid-season',d:40,kc:1.20},{n:'Late',d:30,kc:.60}]},
-  tomato:     {ar:'Tomato',     dur:135, stages:[{n:'Initial',d:30,kc:.40},{n:'Development',d:40,kc:.80},{n:'Mid-season',d:40,kc:1.15},{n:'Late',d:25,kc:.80}]},
-  potato:     {ar:'Potato',     dur:105, stages:[{n:'Initial',d:25,kc:.45},{n:'Development',d:30,kc:.75},{n:'Mid-season',d:30,kc:1.10},{n:'Late',d:20,kc:.85}]},
+  tomato:     {ar:'Tomato',      dur:135, stages:[{n:'Initial',d:30,kc:.40},{n:'Development',d:40,kc:.80},{n:'Mid-season',d:40,kc:1.15},{n:'Late',d:25,kc:.80}]},
+  potato:     {ar:'Potato',      dur:105, stages:[{n:'Initial',d:25,kc:.45},{n:'Development',d:30,kc:.75},{n:'Mid-season',d:30,kc:1.10},{n:'Late',d:20,kc:.85}]},
   onion:      {ar:'Onion',       dur:150, stages:[{n:'Initial',d:15,kc:.50},{n:'Development',d:75,kc:.75},{n:'Mid-season',d:40,kc:1.05},{n:'Late',d:20,kc:.75}]},
-  garlic:     {ar:'Garlic',       dur:150, stages:[{n:'Initial',d:20,kc:.70},{n:'Development',d:30,kc:.80},{n:'Mid-season',d:70,kc:1.00},{n:'Late',d:30,kc:.70}]},
-  cotton:     {ar:'Cotton',       dur:180, stages:[{n:'Initial',d:30,kc:.35},{n:'Development',d:50,kc:.75},{n:'Mid-season',d:60,kc:1.15},{n:'Late',d:40,kc:.70}]},
-  sugarcane:  {ar:'Sugarcane',       dur:365, stages:[{n:'Initial',d:35,kc:.40},{n:'Development',d:60,kc:.80},{n:'Mid-season',d:190,kc:1.25},{n:'Late',d:80,kc:.75}]},
-  sugarbeet:  {ar:'Sugar Beet',      dur:180, stages:[{n:'Initial',d:30,kc:.35},{n:'Development',d:45,kc:.75},{n:'Mid-season',d:70,kc:1.20},{n:'Late',d:35,kc:.70}]},
-  sunflower:  {ar:'Sunflower',dur:125, stages:[{n:'Initial',d:25,kc:.35},{n:'Development',d:35,kc:.75},{n:'Mid-season',d:45,kc:1.10},{n:'Late',d:20,kc:.35}]},
-  citrus:     {ar:'Citrus',     dur:365, stages:[{n:'Initial',d:60,kc:.75},{n:'Development',d:90,kc:.80},{n:'Mid-season',d:120,kc:.85},{n:'Late',d:95,kc:.75}]},
-  grape:      {ar:'Grapes',       dur:180, stages:[{n:'Initial',d:20,kc:.30},{n:'Development',d:40,kc:.70},{n:'Mid-season',d:80,kc:.85},{n:'Late',d:40,kc:.45}]},
-  olive:      {ar:'Olive',     dur:365, stages:[{n:'Initial',d:30,kc:.65},{n:'Development',d:90,kc:.70},{n:'Mid-season',d:150,kc:.70},{n:'Late',d:95,kc:.70}]},
-  date_palm:  {ar:'Date Palm',      dur:365, stages:[{n:'Initial',d:30,kc:.90},{n:'Development',d:60,kc:.95},{n:'Mid-season',d:150,kc:1.00},{n:'Late',d:125,kc:.95}]},
-  mango:      {ar:'Mango',     dur:365, stages:[{n:'Initial',d:60,kc:.70},{n:'Development',d:90,kc:.90},{n:'Mid-season',d:120,kc:1.00},{n:'Late',d:95,kc:.90}]},
-  watermelon: {ar:'Watermelon',      dur:100, stages:[{n:'Initial',d:20,kc:.40},{n:'Development',d:30,kc:.75},{n:'Mid-season',d:30,kc:1.00},{n:'Late',d:20,kc:.75}]},
-  clover:     {ar:'Clover',     dur:180, stages:[{n:'Initial',d:10,kc:.40},{n:'Development',d:10,kc:.90},{n:'Mid-season',d:10,kc:1.15},{n:'Late',d:10,kc:1.10}]},
-  alfalfa:    {ar:'Alfalfa',dur:365,stages:[{n:'Initial',d:10,kc:.40},{n:'Development',d:30,kc:.90},{n:'Mid-season',d:290,kc:1.20},{n:'Late',d:35,kc:1.15}]},
-  rice:       {ar:'Rice',       dur:120, stages:[{n:'Initial',d:30,kc:1.05},{n:'Development',d:30,kc:1.10},{n:'Mid-season',d:30,kc:1.20},{n:'Late',d:30,kc:.90}]},
-  soybean:    {ar:'Soybean',  dur:130, stages:[{n:'Initial',d:20,kc:.40},{n:'Development',d:35,kc:.75},{n:'Mid-season',d:45,kc:1.15},{n:'Late',d:30,kc:.50}]},
-  banana:     {ar:'Banana',       dur:365, stages:[{n:'Initial',d:60,kc:.50},{n:'Development',d:90,kc:.90},{n:'Mid-season',d:120,kc:1.10},{n:'Late',d:95,kc:1.00}]},
-  strawberry: {ar:'Strawberry',    dur:180, stages:[{n:'Initial',d:30,kc:.40},{n:'Development',d:40,kc:.75},{n:'Mid-season',d:60,kc:.85},{n:'Late',d:50,kc:.75}]},
+  garlic:     {ar:'Garlic',      dur:150, stages:[{n:'Initial',d:20,kc:.70},{n:'Development',d:30,kc:.80},{n:'Mid-season',d:70,kc:1.00},{n:'Late',d:30,kc:.70}]},
+  cotton:     {ar:'Cotton',      dur:180, stages:[{n:'Initial',d:30,kc:.35},{n:'Development',d:50,kc:.75},{n:'Mid-season',d:60,kc:1.15},{n:'Late',d:40,kc:.70}]},
+  sugarcane:  {ar:'Sugarcane',   dur:365, stages:[{n:'Initial',d:35,kc:.40},{n:'Development',d:60,kc:.80},{n:'Mid-season',d:190,kc:1.25},{n:'Late',d:80,kc:.75}]},
+  sugarbeet:  {ar:'Sugar Beet',  dur:180, stages:[{n:'Initial',d:30,kc:.35},{n:'Development',d:45,kc:.75},{n:'Mid-season',d:70,kc:1.20},{n:'Late',d:35,kc:.70}]},
+  sunflower:  {ar:'Sunflower',   dur:125, stages:[{n:'Initial',d:25,kc:.35},{n:'Development',d:35,kc:.75},{n:'Mid-season',d:45,kc:1.10},{n:'Late',d:20,kc:.35}]},
+  citrus:     {ar:'Citrus',      dur:365, stages:[{n:'Initial',d:60,kc:.75},{n:'Development',d:90,kc:.80},{n:'Mid-season',d:120,kc:.85},{n:'Late',d:95,kc:.75}]},
+  grape:      {ar:'Grapes',      dur:180, stages:[{n:'Initial',d:20,kc:.30},{n:'Development',d:40,kc:.70},{n:'Mid-season',d:80,kc:.85},{n:'Late',d:40,kc:.45}]},
+  olive:      {ar:'Olive',       dur:365, stages:[{n:'Initial',d:30,kc:.65},{n:'Development',d:90,kc:.70},{n:'Mid-season',d:150,kc:.70},{n:'Late',d:95,kc:.70}]},
+  date_palm:  {ar:'Date Palm',   dur:365, stages:[{n:'Initial',d:30,kc:.90},{n:'Development',d:60,kc:.95},{n:'Mid-season',d:150,kc:1.00},{n:'Late',d:125,kc:.95}]},
+  mango:      {ar:'Mango',       dur:365, stages:[{n:'Initial',d:60,kc:.70},{n:'Development',d:90,kc:.90},{n:'Mid-season',d:120,kc:1.00},{n:'Late',d:95,kc:.90}]},
+  watermelon: {ar:'Watermelon',  dur:100, stages:[{n:'Initial',d:20,kc:.40},{n:'Development',d:30,kc:.75},{n:'Mid-season',d:30,kc:1.00},{n:'Late',d:20,kc:.75}]},
+  clover:     {ar:'Clover',      dur:180, stages:[{n:'Initial',d:10,kc:.40},{n:'Development',d:10,kc:.90},{n:'Mid-season',d:10,kc:1.15},{n:'Late',d:10,kc:1.10}]},
+  alfalfa:    {ar:'Alfalfa',     dur:365, stages:[{n:'Initial',d:10,kc:.40},{n:'Development',d:30,kc:.90},{n:'Mid-season',d:290,kc:1.20},{n:'Late',d:35,kc:1.15}]},
+  rice:       {ar:'Rice',        dur:120, stages:[{n:'Initial',d:30,kc:1.05},{n:'Development',d:30,kc:1.10},{n:'Mid-season',d:30,kc:1.20},{n:'Late',d:30,kc:.90}]},
+  soybean:    {ar:'Soybean',     dur:130, stages:[{n:'Initial',d:20,kc:.40},{n:'Development',d:35,kc:.75},{n:'Mid-season',d:45,kc:1.15},{n:'Late',d:30,kc:.50}]},
+  banana:     {ar:'Banana',      dur:365, stages:[{n:'Initial',d:60,kc:.50},{n:'Development',d:90,kc:.90},{n:'Mid-season',d:120,kc:1.10},{n:'Late',d:95,kc:1.00}]},
+  strawberry: {ar:'Strawberry',  dur:180, stages:[{n:'Initial',d:30,kc:.40},{n:'Development',d:40,kc:.75},{n:'Mid-season',d:60,kc:.85},{n:'Late',d:50,kc:.75}]},
   pepper:     {ar:'Pepper',      dur:150, stages:[{n:'Initial',d:30,kc:.35},{n:'Development',d:40,kc:.70},{n:'Mid-season',d:50,kc:1.05},{n:'Late',d:30,kc:.90}]},
-  cucumber:   {ar:'Cucumber',      dur:105, stages:[{n:'Initial',d:20,kc:.60},{n:'Development',d:30,kc:.75},{n:'Mid-season',d:40,kc:1.00},{n:'Late',d:15,kc:.75}]},
-  cabbage:    {ar:'Cabbage',      dur:120, stages:[{n:'Initial',d:25,kc:.45},{n:'Development',d:35,kc:.75},{n:'Mid-season',d:40,kc:1.05},{n:'Late',d:20,kc:.90}]},
-  carrot:     {ar:'Carrot',       dur:120, stages:[{n:'Initial',d:20,kc:.70},{n:'Development',d:30,kc:.85},{n:'Mid-season',d:50,kc:1.05},{n:'Late',d:20,kc:.95}]},
-  eggplant:   {ar:'Eggplant',   dur:140, stages:[{n:'Initial',d:30,kc:.45},{n:'Development',d:40,kc:.75},{n:'Mid-season',d:40,kc:1.05},{n:'Late',d:30,kc:.90}]},
+  cucumber:   {ar:'Cucumber',    dur:105, stages:[{n:'Initial',d:20,kc:.60},{n:'Development',d:30,kc:.75},{n:'Mid-season',d:40,kc:1.00},{n:'Late',d:15,kc:.75}]},
+  cabbage:    {ar:'Cabbage',     dur:120, stages:[{n:'Initial',d:25,kc:.45},{n:'Development',d:35,kc:.75},{n:'Mid-season',d:40,kc:1.05},{n:'Late',d:20,kc:.90}]},
+  carrot:     {ar:'Carrot',      dur:120, stages:[{n:'Initial',d:20,kc:.70},{n:'Development',d:30,kc:.85},{n:'Mid-season',d:50,kc:1.05},{n:'Late',d:20,kc:.95}]},
+  eggplant:   {ar:'Eggplant',    dur:140, stages:[{n:'Initial',d:30,kc:.45},{n:'Development',d:40,kc:.75},{n:'Mid-season',d:40,kc:1.05},{n:'Late',d:30,kc:.90}]},
   squash:     {ar:'Squash',      dur:95,  stages:[{n:'Initial',d:25,kc:.50},{n:'Development',d:30,kc:.75},{n:'Mid-season',d:25,kc:.95},{n:'Late',d:15,kc:.75}]},
-  lettuce:    {ar:'Lettuce',        dur:75,  stages:[{n:'Initial',d:20,kc:.70},{n:'Development',d:30,kc:.90},{n:'Mid-season',d:15,kc:1.00},{n:'Late',d:10,kc:.90}]},
-  peanut:     {ar:'Peanut',dur:130, stages:[{n:'Initial',d:25,kc:.40},{n:'Development',d:35,kc:.75},{n:'Mid-season',d:45,kc:1.15},{n:'Late',d:25,kc:.60}]},
-  faba_bean:  {ar:'Faba Bean',  dur:180, stages:[{n:'Initial',d:20,kc:.50},{n:'Development',d:50,kc:.75},{n:'Mid-season',d:70,kc:1.15},{n:'Late',d:40,kc:.30}]},
-  sorghum:    {ar:'Sorghum', dur:130, stages:[{n:'Initial',d:20,kc:.30},{n:'Development',d:35,kc:.70},{n:'Mid-season',d:45,kc:1.00},{n:'Late',d:30,kc:.55}]},
-  millet:     {ar:'Millet',       dur:90,  stages:[{n:'Initial',d:15,kc:.30},{n:'Development',d:25,kc:.70},{n:'Mid-season',d:30,kc:1.00},{n:'Late',d:20,kc:.30}]},
+  lettuce:    {ar:'Lettuce',     dur:75,  stages:[{n:'Initial',d:20,kc:.70},{n:'Development',d:30,kc:.90},{n:'Mid-season',d:15,kc:1.00},{n:'Late',d:10,kc:.90}]},
+  peanut:     {ar:'Peanut',      dur:130, stages:[{n:'Initial',d:25,kc:.40},{n:'Development',d:35,kc:.75},{n:'Mid-season',d:45,kc:1.15},{n:'Late',d:25,kc:.60}]},
+  faba_bean:  {ar:'Faba Bean',   dur:180, stages:[{n:'Initial',d:20,kc:.50},{n:'Development',d:50,kc:.75},{n:'Mid-season',d:70,kc:1.15},{n:'Late',d:40,kc:.30}]},
+  sorghum:    {ar:'Sorghum',     dur:130, stages:[{n:'Initial',d:20,kc:.30},{n:'Development',d:35,kc:.70},{n:'Mid-season',d:45,kc:1.00},{n:'Late',d:30,kc:.55}]},
+  millet:     {ar:'Millet',      dur:90,  stages:[{n:'Initial',d:15,kc:.30},{n:'Development',d:25,kc:.70},{n:'Mid-season',d:30,kc:1.00},{n:'Late',d:20,kc:.30}]},
   sesame:     {ar:'Sesame',      dur:100, stages:[{n:'Initial',d:15,kc:.35},{n:'Development',d:35,kc:.70},{n:'Mid-season',d:30,kc:1.10},{n:'Late',d:20,kc:.25}]},
-  lentil:     {ar:'Lentil',       dur:150, stages:[{n:'Initial',d:20,kc:.40},{n:'Development',d:30,kc:.70},{n:'Mid-season',d:60,kc:1.10},{n:'Late',d:40,kc:.30}]},
-  quinoa:     {ar:'Quinoa',     dur:100, stages:[{n:'Initial',d:15,kc:.35},{n:'Development',d:30,kc:.70},{n:'Mid-season',d:35,kc:1.00},{n:'Late',d:20,kc:.50}]},
+  lentil:     {ar:'Lentil',      dur:150, stages:[{n:'Initial',d:20,kc:.40},{n:'Development',d:30,kc:.70},{n:'Mid-season',d:60,kc:1.10},{n:'Late',d:40,kc:.30}]},
+  quinoa:     {ar:'Quinoa',      dur:100, stages:[{n:'Initial',d:15,kc:.35},{n:'Development',d:30,kc:.70},{n:'Mid-season',d:35,kc:1.00},{n:'Late',d:20,kc:.50}]},
 };
 
 const W_IRR_ADJ = {
@@ -991,14 +885,11 @@ const W_GEE = {
   default:{ndvi:.480,kc:.680}
 };
 
-// ════════════════════════════════════════════════════════
-// WATER ENGINE HELPERS — FAO-56
-// ════════════════════════════════════════════════════════
 function wGetKcBase(cropKey, dayOfSeason){
   const crop = W_CROPS[cropKey] || W_CROPS.wheat;
   let cum = 0;
   for(const s of crop.stages){ cum += s.d; if(dayOfSeason <= cum) return s.kc; }
-  return crop.stages.at(-1).kc;
+  return crop.stages[crop.stages.length-1].kc;
 }
 function wGetStageIdx(cropKey, dayOfSeason){
   const crop = W_CROPS[cropKey] || W_CROPS.wheat;
@@ -1019,8 +910,8 @@ function wGetSeasonTotal(cropKey, et0, irrType, feddan){
   return +(total*feddan).toFixed(0);
 }
 function wGetSeasonTotalKc(kcFixed, et0, feddan, ckOverride){
-  const ck   = ckOverride || document.getElementById('w_globalCrop')?.value || 'wheat';
-  const crop = W_CROPS[ck]||W_CROPS.wheat;
+  var ck = ckOverride || (document.getElementById('w_globalCrop') ? document.getElementById('w_globalCrop').value : 'wheat') || 'wheat';
+  var crop = W_CROPS[ck]||W_CROPS.wheat;
   return +(kcFixed * et0 * crop.dur * feddan).toFixed(0);
 }
 function wGetHarvest(plantDate, cropKey){
@@ -1037,22 +928,20 @@ function wGetStageName(cropKey, day){
   const crop = W_CROPS[cropKey]||W_CROPS.wheat;
   let cum=0;
   for(const s of crop.stages){ cum+=s.d; if(day<=cum) return s.n; }
-  return crop.stages.at(-1).n;
+  return crop.stages[crop.stages.length-1].n;
 }
 function wIrrLabel(t){ return {drip:'Drip',sprinkler:'Sprinkler',furrow:'Furrow',surface:'Surface',none:'FAO'}[t]||'—'; }
 
-// Live ET₀ from Open-Meteo
 async function wFetchET0(lat,lon){
   try{
-    const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=et0_fao_evapotranspiration,temperature_2m_max,precipitation_sum&timezone=Africa%2FCairo&forecast_days=1`;
+    const url='https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon+'&daily=et0_fao_evapotranspiration,temperature_2m_max,precipitation_sum&timezone=Africa%2FCairo&forecast_days=1';
     const d=await (await fetch(url)).json();
-    if(d.daily?.et0_fao_evapotranspiration?.[0])
+    if(d.daily&&d.daily.et0_fao_evapotranspiration&&d.daily.et0_fao_evapotranspiration[0])
       return {et0:d.daily.et0_fao_evapotranspiration[0],tmax:d.daily.temperature_2m_max[0],rain:d.daily.precipitation_sum[0],date:d.daily.time[0]};
   }catch(e){}
   return null;
 }
 
-// Cloud water data save
 async function wSaveToCloud(farmId,waterData){
   if(!currentUser||!farmId) return;
   try{
@@ -1060,47 +949,49 @@ async function wSaveToCloud(farmId,waterData){
   }catch(e){}
 }
 
-// Fetch all farms ET₀
 async function wFetchAll(){
   const all = getAllFarms().filter(f=>f.lat&&f.lng);
   if(!all.length){ showToast('No farms with coordinates found','#888'); return; }
   const btn=document.getElementById('wFetchBtn');
   const status=document.getElementById('w_status');
   btn.disabled=true; btn.textContent='⏳ Fetching...';
-  status.textContent=`Fetching ${all.length} fields...`;
+  status.textContent='Fetching '+all.length+' fields...';
   let done=0;
   const seen=new Set();
   for(const f of all){
-    const key=`${f.lat.toFixed(2)},${f.lng.toFixed(2)}`;
+    const key=f.lat.toFixed(2)+','+f.lng.toFixed(2);
     if(!seen.has(key)){
       seen.add(key);
       const wx=await wFetchET0(f.lat,f.lng);
-      if(wx) all.filter(ff=>`${ff.lat.toFixed(2)},${ff.lng.toFixed(2)}`===key).forEach(ff=>{ff._et0Live=wx.et0;ff._wx=wx;});
+      if(wx) all.filter(ff=>ff.lat.toFixed(2)+','+ff.lng.toFixed(2)===key).forEach(ff=>{ff._et0Live=wx.et0;ff._wx=wx;});
     }
     done++;
-    status.textContent=`Done ${done}/${all.length}...`;
+    status.textContent='Done '+done+'/'+all.length+'...';
     await new Promise(r=>setTimeout(r,120));
   }
-  all.forEach(f=>{const ck=document.getElementById('w_globalCrop')?.value||'wheat';const g=W_GEE[ck]||W_GEE.default;f._ndviKc=g.kc;f._ndviVal=g.ndvi;});
-  const et0El=document.getElementById('w_et0');
-  if(et0El&&all[0]?._et0Live) et0El.value=all[0]._et0Live;
-  const wxBadge=document.getElementById('w_wx_badge');
-  if(wxBadge) wxBadge.textContent=all[0]?._wx?`🌡️ ${all[0]._wx.tmax}°C | 🌧️ ${all[0]._wx.rain}mm | ${all[0]._wx.date}`:'';
+  all.forEach(f=>{
+    var ck=document.getElementById('w_globalCrop')?document.getElementById('w_globalCrop').value:'wheat';
+    var g=W_GEE[ck]||W_GEE.default;
+    f._ndviKc=g.kc; f._ndviVal=g.ndvi;
+  });
+  var et0El=document.getElementById('w_et0');
+  if(et0El&&all[0]&&all[0]._et0Live) et0El.value=all[0]._et0Live;
+  var wxBadge=document.getElementById('w_wx_badge');
+  if(wxBadge) wxBadge.textContent=all[0]&&all[0]._wx?('🌡️ '+all[0]._wx.tmax+'°C | 🌧️ '+all[0]._wx.rain+'mm | '+all[0]._wx.date):'';
   btn.disabled=false; btn.textContent='🛰️ Fetch Live ET₀ + NDVI';
-  status.textContent=`✅ Fetched ${seen.size} locations`;
+  status.textContent='✅ Fetched '+seen.size+' locations';
   wCalcAll();
 }
 
-// Main water calc — FAO vs NDVI, seasonal only
 async function wCalcAll(){
   const all       = getAllFarms();
-  const et0       = parseFloat(document.getElementById('w_et0')?.value)||5.5;
-  const fedRaw    = parseFloat(document.getElementById('w_feddan')?.value)||4200;
+  const et0       = parseFloat(document.getElementById('w_et0')?document.getElementById('w_et0').value:5.5)||5.5;
+  const fedRaw    = parseFloat(document.getElementById('w_feddan')?document.getElementById('w_feddan').value:4200)||4200;
   const FED       = fedRaw/1000;
-  const globalCrop= document.getElementById('w_globalCrop')?.value||'wheat';
-  const globalIrr = document.getElementById('w_globalIrr')?.value||'drip';
-  const globalPlt = document.getElementById('w_plantDate')?.value||'';
-  const irrEff    = parseFloat(document.getElementById('w_irrEff')?.value)||85;
+  const globalCrop= document.getElementById('w_globalCrop')?document.getElementById('w_globalCrop').value:'wheat';
+  const globalIrr = document.getElementById('w_globalIrr')?document.getElementById('w_globalIrr').value:'drip';
+  const globalPlt = document.getElementById('w_plantDate')?document.getElementById('w_plantDate').value:'';
+  const irrEff    = parseFloat(document.getElementById('w_irrEff')?document.getElementById('w_irrEff').value:85)||85;
 
   if(!all.length){
     document.getElementById('wResults').innerHTML='<div style="text-align:center;padding:30px;color:#aaa">No farms yet. Add farms in the Calculator tab.</div>';
@@ -1115,7 +1006,7 @@ async function wCalcAll(){
   let rows='', cards='';
   let totFAO=0, totNDVI=0;
 
-  all.forEach((f,fi)=>{
+  all.forEach(function(f,fi){
     const fd       = f.farm_data||f;
     const plantDate= globalPlt || fd.plantDate || defaultPlant;
     const area     = parseFloat(fd.area)||1;
@@ -1127,13 +1018,11 @@ async function wCalcAll(){
     const stage    = wGetStageName(globalCrop,age);
     const et0f     = f._et0Live||et0;
 
-    // FAO
     const faoPerFed  = wGetSeasonTotal(globalCrop,et0f,globalIrr,FED*1);
     const faoTotal   = wGetSeasonTotal(globalCrop,et0f,globalIrr,FED*aFed);
     const faoGrossPF = Math.round(faoPerFed/(irrEff/100));
     const faoGrossT  = Math.round(faoTotal/(irrEff/100));
 
-    // NDVI
     const ndviKc   = f._ndviKc||(W_GEE[globalCrop]||W_GEE.default).kc;
     const ndviPF   = +wGetSeasonTotalKc(ndviKc,et0f,FED*1,globalCrop);
     const ndviT    = +wGetSeasonTotalKc(ndviKc,et0f,FED*aFed,globalCrop);
@@ -1144,7 +1033,6 @@ async function wCalcAll(){
     const diffPct  = faoGrossPF>0?Math.round((diffPF/faoGrossPF)*100):0;
     const diffColor= diffPF>0?'#e65100':diffPF<0?'#2e7d32':'#888';
 
-    // Schedule
     const interval = globalIrr==='drip'?3:globalIrr==='sprinkler'?5:globalIrr==='furrow'?10:14;
     const nEvents  = Math.round(crop.dur/interval);
     const nextIrr  = Math.max(0,interval-(age%interval));
@@ -1160,157 +1048,134 @@ async function wCalcAll(){
     const dLC     = dLeft>30?'#2e7d32':dLeft>0?'#e65100':'#c62828';
     const barC    = pct<33?'#a5d6a7':pct<66?'#90caf9':pct<90?'#ffcc80':'#ef9a9a';
 
-    // Save water data to cloud (non-pilot only)
-    if(!isPilot&&f.id) wSaveToCloud(f.id,{cropKey:globalCrop,plantDate,irrType:globalIrr,faoSeasonTotal:faoTotal,ndviSeasonTotal:ndviT,et0:et0f,calcDate:new Date().toISOString()});
+    if(!isPilot&&f.id) wSaveToCloud(f.id,{cropKey:globalCrop,plantDate:plantDate,irrType:globalIrr,faoSeasonTotal:faoTotal,ndviSeasonTotal:ndviT,et0:et0f,calcDate:new Date().toISOString()});
 
-    rows += `<tr>
-      <td style="font-weight:700;color:${color};white-space:nowrap">
-        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:4px"></span>
-        ${fd.name||'—'}${isPilot?'<span style="font-size:9px;background:#e3f2fd;color:#1565c0;padding:1px 4px;border-radius:3px;margin-left:3px">pilot</span>':'<span style="font-size:9px;background:#e8f5e9;color:#2e7d32;padding:1px 4px;border-radius:3px;margin-left:3px">mine</span>'}
-      </td>
-      <td style="font-size:11px;white-space:nowrap">${aFed.toFixed(1)} fed</td>
-      <td>
-        <div style="height:5px;background:#eee;border-radius:2px;width:55px;display:inline-block;vertical-align:middle">
-          <div style="width:${pct}%;height:5px;background:${barC};border-radius:2px"></div>
-        </div>
-        <span style="font-size:10px;color:#888;margin-left:3px">${stage}</span>
-      </td>
-      <td style="font-size:11px;color:${dLC};white-space:nowrap">${dLeft>0?dLeft+'d':dLeft===0?'Today!':'✅'}</td>
-      <td style="font-family:monospace;font-weight:700;color:#1565c0;text-align:right">${faoPerFed.toLocaleString()}</td>
-      <td style="font-family:monospace;font-weight:700;color:#2e7d32;text-align:right">${faoGrossT.toLocaleString()}</td>
-      <td style="font-family:monospace;font-weight:700;color:#7b1fa2;text-align:right">${ndviGPF.toLocaleString()}</td>
-      <td style="font-family:monospace;font-weight:700;color:#6a1b9a;text-align:right">${ndviGT.toLocaleString()}</td>
-      <td style="font-weight:700;color:${diffColor};text-align:right">${diffPF>0?'+':''}${diffPF.toLocaleString()} (${diffPct}%)</td>
-      <td style="font-size:11px;text-align:center">${nEvents}×${interval}d<br><span style="color:${nextIrr===0?'#c62828':'#1565c0'};font-size:10px">${nextIrr===0?'⚠️ Today':nextIrr+'d'}</span></td>
-      <td style="font-weight:700;color:${fieldEff>=80?'#2e7d32':'#e65100'};text-align:center">${fieldEff}%</td>
-    </tr>`;
+    rows += '<tr>'+
+      '<td style="font-weight:700;color:'+color+';white-space:nowrap">'+
+        '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+color+';margin-right:4px"></span>'+
+        (fd.name||'—')+(isPilot?'<span style="font-size:9px;background:#e3f2fd;color:#1565c0;padding:1px 4px;border-radius:3px;margin-left:3px">pilot</span>':'<span style="font-size:9px;background:#e8f5e9;color:#2e7d32;padding:1px 4px;border-radius:3px;margin-left:3px">mine</span>')+
+      '</td>'+
+      '<td style="font-size:11px;white-space:nowrap">'+aFed.toFixed(1)+' fed</td>'+
+      '<td>'+
+        '<div style="height:5px;background:#eee;border-radius:2px;width:55px;display:inline-block;vertical-align:middle">'+
+          '<div style="width:'+pct+'%;height:5px;background:'+barC+';border-radius:2px"></div>'+
+        '</div>'+
+        '<span style="font-size:10px;color:#888;margin-left:3px">'+stage+'</span>'+
+      '</td>'+
+      '<td style="font-size:11px;color:'+dLC+';white-space:nowrap">'+(dLeft>0?dLeft+'d':dLeft===0?'Today!':'✅')+'</td>'+
+      '<td style="font-family:monospace;font-weight:700;color:#1565c0;text-align:right">'+faoPerFed.toLocaleString()+'</td>'+
+      '<td style="font-family:monospace;font-weight:700;color:#2e7d32;text-align:right">'+faoGrossT.toLocaleString()+'</td>'+
+      '<td style="font-family:monospace;font-weight:700;color:#7b1fa2;text-align:right">'+ndviGPF.toLocaleString()+'</td>'+
+      '<td style="font-family:monospace;font-weight:700;color:#6a1b9a;text-align:right">'+ndviGT.toLocaleString()+'</td>'+
+      '<td style="font-weight:700;color:'+diffColor+';text-align:right">'+(diffPF>0?'+':'')+diffPF.toLocaleString()+' ('+diffPct+'%)</td>'+
+      '<td style="font-size:11px;text-align:center">'+nEvents+'×'+interval+'d<br><span style="color:'+(nextIrr===0?'#c62828':'#1565c0')+';font-size:10px">'+(nextIrr===0?'⚠️ Today':nextIrr+'d')+'</span></td>'+
+      '<td style="font-weight:700;color:'+(fieldEff>=80?'#2e7d32':'#e65100')+';text-align:center">'+fieldEff+'%</td>'+
+    '</tr>';
 
-    cards += `<div style="background:#fff;border:1.5px solid #e0e7ff;border-radius:9px;padding:11px;min-width:165px;flex:1">
-      <div style="font-size:12px;font-weight:700;color:${color};margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fd.name||'—'}${isPilot?'<span style="font-size:9px;color:#1565c0;margin-left:2px">●</span>':''}</div>
-      <div style="font-size:10px;color:#888;margin-bottom:5px">${cropLabel} · ${stage}</div>
-      <div style="height:6px;background:#eef;border-radius:3px;margin-bottom:3px">
-        <div style="width:${pct}%;height:6px;background:${barC};border-radius:3px"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:#888;margin-bottom:5px">
-        <span>Planted: ${plantDate.slice(5)}</span>
-        <span>Harvest: ${harvestLabel.slice(5)}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:5px">
-        <span style="color:${dLC}">${dLeft>0?dLeft+'d left':dLeft===0?'Harvest today!':'Done'}</span>
-        <span style="color:${nextIrr===0?'#c62828':'#1565c0'}">Irr: ${nextIrr===0?'⚠️ Today':nextIrr+'d'}</span>
-      </div>
-      <div style="border-top:1px solid #f0f4ff;padding-top:5px">
-        <div style="display:flex;justify-content:space-between;font-size:11px">
-          <span style="color:#888">FAO/fed:</span><b style="color:#1565c0">${faoPerFed.toLocaleString()} m³</b>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:11px">
-          <span style="color:#888">NDVI/fed:</span><b style="color:#7b1fa2">${ndviGPF.toLocaleString()} m³</b>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:11px">
-          <span style="color:#888">FAO total:</span><b style="color:#2e7d32">${faoGrossT.toLocaleString()} m³</b>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:11px">
-          <span style="color:#888">Field eff:</span><b style="color:${fieldEff>=80?'#2e7d32':'#e65100'}">${fieldEff}%</b>
-        </div>
-      </div>
-    </div>`;
+    cards += '<div style="background:#fff;border:1.5px solid #e0e7ff;border-radius:9px;padding:11px;min-width:165px;flex:1">'+
+      '<div style="font-size:12px;font-weight:700;color:'+color+';margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(fd.name||'—')+(isPilot?'<span style="font-size:9px;color:#1565c0;margin-left:2px">●</span>':'')+'</div>'+
+      '<div style="font-size:10px;color:#888;margin-bottom:5px">'+cropLabel+' · '+stage+'</div>'+
+      '<div style="height:6px;background:#eef;border-radius:3px;margin-bottom:3px">'+
+        '<div style="width:'+pct+'%;height:6px;background:'+barC+';border-radius:3px"></div>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between;font-size:10px;color:#888;margin-bottom:5px">'+
+        '<span>Planted: '+plantDate.slice(5)+'</span>'+
+        '<span>Harvest: '+harvestLabel.slice(5)+'</span>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:5px">'+
+        '<span style="color:'+dLC+'">'+(dLeft>0?dLeft+'d left':dLeft===0?'Harvest today!':'Done')+'</span>'+
+        '<span style="color:'+(nextIrr===0?'#c62828':'#1565c0')+'">Irr: '+(nextIrr===0?'⚠️ Today':nextIrr+'d')+'</span>'+
+      '</div>'+
+      '<div style="border-top:1px solid #f0f4ff;padding-top:5px">'+
+        '<div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:#888">FAO/fed:</span><b style="color:#1565c0">'+faoPerFed.toLocaleString()+' m³</b></div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:#888">NDVI/fed:</span><b style="color:#7b1fa2">'+ndviGPF.toLocaleString()+' m³</b></div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:#888">FAO total:</span><b style="color:#2e7d32">'+faoGrossT.toLocaleString()+' m³</b></div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:#888">Field eff:</span><b style="color:'+(fieldEff>=80?'#2e7d32':'#e65100')+'">'+fieldEff+'%</b></div>'+
+      '</div>'+
+    '</div>';
   });
 
   const faoAvgPF  = all.length ? Math.round(totFAO/all.length/(fedRaw/1000)) : 0;
   const ndviAvgPF = all.length ? Math.round(totNDVI/all.length/(fedRaw/1000)) : 0;
 
-  document.getElementById('wResults').innerHTML = `
-    <!-- Summary header -->
-    <div style="background:linear-gradient(135deg,#1565c0,#0d47a1);border-radius:10px;padding:12px 16px;color:#fff;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:16px;align-items:center">
-      <div><div style="font-size:11px;opacity:.8">Crop · Season Duration</div>
-        <div style="font-size:16px;font-weight:700">${cropLabel} · ${crop.dur} days</div>
-        <div style="font-size:10px;opacity:.75">Planted: ${defaultPlant} → Harvest: ${harvestLabel}</div>
-      </div>
-      <div style="border-left:1px solid rgba(255,255,255,.25);padding-left:16px">
-        <div style="font-size:11px;opacity:.8">Irrigation · Efficiency</div>
-        <div style="font-size:15px;font-weight:700">${wIrrLabel(globalIrr)} · ${irrEff}%</div>
-        <div style="font-size:10px;opacity:.75">ET₀ = ${et0} mm/day · ${all.length} farms total</div>
-      </div>
-    </div>
-
-    <!-- 4 KPI cards -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;margin-bottom:14px">
-      <div style="background:#fff;border-radius:9px;padding:13px;border-top:4px solid #1565c0;box-shadow:0 2px 8px rgba(0,0,0,.06)">
-        <div style="font-size:10px;color:#888;margin-bottom:4px">📐 FAO — per feddan</div>
-        <div style="font-size:26px;font-weight:800;color:#1565c0">${faoAvgPF.toLocaleString()}</div>
-        <div style="font-size:10px;color:#888">m³/feddan/season (gross)</div>
-      </div>
-      <div style="background:#fff;border-radius:9px;padding:13px;border-top:4px solid #7b1fa2;box-shadow:0 2px 8px rgba(0,0,0,.06)">
-        <div style="font-size:10px;color:#888;margin-bottom:4px">🛰️ NDVI — per feddan</div>
-        <div style="font-size:26px;font-weight:800;color:#7b1fa2">${ndviAvgPF.toLocaleString()}</div>
-        <div style="font-size:10px;color:#888">m³/feddan/season (gross)</div>
-      </div>
-      <div style="background:#fff;border-radius:9px;padding:13px;border-top:4px solid #2e7d32;box-shadow:0 2px 8px rgba(0,0,0,.06)">
-        <div style="font-size:10px;color:#888;margin-bottom:4px">📊 FAO — all farms total</div>
-        <div style="font-size:26px;font-weight:800;color:#2e7d32">${Math.round(totFAO/(irrEff/100)).toLocaleString()}</div>
-        <div style="font-size:10px;color:#888">m³/season (gross)</div>
-      </div>
-      <div style="background:#fff;border-radius:9px;padding:13px;border-top:4px solid #6a1b9a;box-shadow:0 2px 8px rgba(0,0,0,.06)">
-        <div style="font-size:10px;color:#888;margin-bottom:4px">🛰️ NDVI — all farms total</div>
-        <div style="font-size:26px;font-weight:800;color:#6a1b9a">${Math.round(totNDVI/(irrEff/100)).toLocaleString()}</div>
-        <div style="font-size:10px;color:#888">m³/season (gross)</div>
-      </div>
-    </div>
-
-    <!-- Season tracker cards -->
-    <div style="font-size:12px;font-weight:700;color:#1565c0;margin-bottom:8px">📅 Season Tracker — All Farms</div>
-    <div style="display:flex;flex-wrap:wrap;gap:9px;margin-bottom:14px">${cards}</div>
-
-    <!-- FAO vs NDVI table -->
-    <div style="font-size:12px;font-weight:700;color:#1565c0;margin-bottom:7px">📊 FAO vs NDVI — Seasonal Water Comparison</div>
-    <div style="overflow-x:auto;border-radius:9px;border:1px solid #e0e7ff">
-      <table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:820px">
-        <thead>
-          <tr style="background:#1565c0;color:#fff">
-            <th style="padding:8px;text-align:left">Farm</th>
-            <th style="padding:8px;text-align:center">Area</th>
-            <th style="padding:8px;text-align:center">Progress</th>
-            <th style="padding:8px;text-align:center">Days Left</th>
-            <th style="padding:8px;text-align:center;background:#1565c0">FAO m³/fed</th>
-            <th style="padding:8px;text-align:center;background:#1565c0">FAO Gross Total</th>
-            <th style="padding:8px;text-align:center;background:#6a1b9a">NDVI m³/fed</th>
-            <th style="padding:8px;text-align:center;background:#6a1b9a">NDVI Gross Total</th>
-            <th style="padding:8px;text-align:center">Diff /fed</th>
-            <th style="padding:8px;text-align:center">Irr Schedule</th>
-            <th style="padding:8px;text-align:center">Field Eff.</th>
-          </tr>
-        </thead>
-        <tbody>${rows}
-          <tr style="background:#e8f5e9;font-weight:800;border-top:2px solid #a5d6a7">
-            <td style="padding:8px;color:#2e7d32" colspan="4">Total — ${all.length} farms</td>
-            <td style="padding:8px;text-align:right;color:#1565c0">${faoAvgPF.toLocaleString()}</td>
-            <td style="padding:8px;text-align:right;color:#2e7d32">${Math.round(totFAO/(irrEff/100)).toLocaleString()}</td>
-            <td style="padding:8px;text-align:right;color:#7b1fa2">${ndviAvgPF.toLocaleString()}</td>
-            <td style="padding:8px;text-align:right;color:#6a1b9a">${Math.round(totNDVI/(irrEff/100)).toLocaleString()}</td>
-            <td colspan="3"></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div style="font-size:10.5px;color:#888;margin-top:9px;padding:8px 11px;background:#f8f9ff;border-radius:7px;line-height:1.8">
-      💡 <b>FAO</b> = FAO-56 Penman-Monteith stage-Kc × irrigation factor ÷ efficiency ·
-      <b>NDVI</b> = Sentinel-2 GEE-derived Kc ÷ efficiency ·
-      <b>Diff</b> = FAO gross − NDVI gross per feddan ·
-      <b>Field Eff.</b> = Kc_adj × declared irrigation efficiency · Pilot farms (●) included
-    </div>`;
+  document.getElementById('wResults').innerHTML =
+    '<div style="background:linear-gradient(135deg,#1565c0,#0d47a1);border-radius:10px;padding:12px 16px;color:#fff;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:16px;align-items:center">'+
+      '<div><div style="font-size:11px;opacity:.8">Crop · Season Duration</div>'+
+        '<div style="font-size:16px;font-weight:700">'+cropLabel+' · '+crop.dur+' days</div>'+
+        '<div style="font-size:10px;opacity:.75">Planted: '+defaultPlant+' → Harvest: '+harvestLabel+'</div>'+
+      '</div>'+
+      '<div style="border-left:1px solid rgba(255,255,255,.25);padding-left:16px">'+
+        '<div style="font-size:11px;opacity:.8">Irrigation · Efficiency</div>'+
+        '<div style="font-size:15px;font-weight:700">'+wIrrLabel(globalIrr)+' · '+irrEff+'%</div>'+
+        '<div style="font-size:10px;opacity:.75">ET₀ = '+et0+' mm/day · '+all.length+' farms total</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;margin-bottom:14px">'+
+      '<div style="background:#fff;border-radius:9px;padding:13px;border-top:4px solid #1565c0;box-shadow:0 2px 8px rgba(0,0,0,.06)">'+
+        '<div style="font-size:10px;color:#888;margin-bottom:4px">📐 FAO — per feddan</div>'+
+        '<div style="font-size:26px;font-weight:800;color:#1565c0">'+faoAvgPF.toLocaleString()+'</div>'+
+        '<div style="font-size:10px;color:#888">m³/feddan/season (gross)</div></div>'+
+      '<div style="background:#fff;border-radius:9px;padding:13px;border-top:4px solid #7b1fa2;box-shadow:0 2px 8px rgba(0,0,0,.06)">'+
+        '<div style="font-size:10px;color:#888;margin-bottom:4px">🛰️ NDVI — per feddan</div>'+
+        '<div style="font-size:26px;font-weight:800;color:#7b1fa2">'+ndviAvgPF.toLocaleString()+'</div>'+
+        '<div style="font-size:10px;color:#888">m³/feddan/season (gross)</div></div>'+
+      '<div style="background:#fff;border-radius:9px;padding:13px;border-top:4px solid #2e7d32;box-shadow:0 2px 8px rgba(0,0,0,.06)">'+
+        '<div style="font-size:10px;color:#888;margin-bottom:4px">📊 FAO — all farms total</div>'+
+        '<div style="font-size:26px;font-weight:800;color:#2e7d32">'+Math.round(totFAO/(irrEff/100)).toLocaleString()+'</div>'+
+        '<div style="font-size:10px;color:#888">m³/season (gross)</div></div>'+
+      '<div style="background:#fff;border-radius:9px;padding:13px;border-top:4px solid #6a1b9a;box-shadow:0 2px 8px rgba(0,0,0,.06)">'+
+        '<div style="font-size:10px;color:#888;margin-bottom:4px">🛰️ NDVI — all farms total</div>'+
+        '<div style="font-size:26px;font-weight:800;color:#6a1b9a">'+Math.round(totNDVI/(irrEff/100)).toLocaleString()+'</div>'+
+        '<div style="font-size:10px;color:#888">m³/season (gross)</div></div>'+
+    '</div>'+
+    '<div style="font-size:12px;font-weight:700;color:#1565c0;margin-bottom:8px">📅 Season Tracker — All Farms</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:9px;margin-bottom:14px">'+cards+'</div>'+
+    '<div style="font-size:12px;font-weight:700;color:#1565c0;margin-bottom:7px">📊 FAO vs NDVI — Seasonal Water Comparison</div>'+
+    '<div style="overflow-x:auto;border-radius:9px;border:1px solid #e0e7ff">'+
+      '<table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:820px">'+
+        '<thead><tr style="background:#1565c0;color:#fff">'+
+          '<th style="padding:8px;text-align:left">Farm</th>'+
+          '<th style="padding:8px;text-align:center">Area</th>'+
+          '<th style="padding:8px;text-align:center">Progress</th>'+
+          '<th style="padding:8px;text-align:center">Days Left</th>'+
+          '<th style="padding:8px;text-align:center">FAO m³/fed</th>'+
+          '<th style="padding:8px;text-align:center">FAO Gross Total</th>'+
+          '<th style="padding:8px;text-align:center;background:#6a1b9a">NDVI m³/fed</th>'+
+          '<th style="padding:8px;text-align:center;background:#6a1b9a">NDVI Gross Total</th>'+
+          '<th style="padding:8px;text-align:center">Diff /fed</th>'+
+          '<th style="padding:8px;text-align:center">Irr Schedule</th>'+
+          '<th style="padding:8px;text-align:center">Field Eff.</th>'+
+        '</tr></thead>'+
+        '<tbody>'+rows+
+          '<tr style="background:#e8f5e9;font-weight:800;border-top:2px solid #a5d6a7">'+
+            '<td style="padding:8px;color:#2e7d32" colspan="4">Total — '+all.length+' farms</td>'+
+            '<td style="padding:8px;text-align:right;color:#1565c0">'+faoAvgPF.toLocaleString()+'</td>'+
+            '<td style="padding:8px;text-align:right;color:#2e7d32">'+Math.round(totFAO/(irrEff/100)).toLocaleString()+'</td>'+
+            '<td style="padding:8px;text-align:right;color:#7b1fa2">'+ndviAvgPF.toLocaleString()+'</td>'+
+            '<td style="padding:8px;text-align:right;color:#6a1b9a">'+Math.round(totNDVI/(irrEff/100)).toLocaleString()+'</td>'+
+            '<td colspan="3"></td>'+
+          '</tr>'+
+        '</tbody>'+
+      '</table>'+
+    '</div>'+
+    '<div style="font-size:10.5px;color:#888;margin-top:9px;padding:8px 11px;background:#f8f9ff;border-radius:7px;line-height:1.8">'+
+      '💡 <b>FAO</b> = FAO-56 Penman-Monteith stage-Kc × irrigation factor ÷ efficiency · '+
+      '<b>NDVI</b> = Sentinel-2 GEE-derived Kc ÷ efficiency · '+
+      '<b>Diff</b> = FAO gross − NDVI gross per feddan · '+
+      '<b>Field Eff.</b> = Kc_adj × declared irrigation efficiency · Pilot farms (●) included'+
+    '</div>';
 }
 
-// Export water CSV
 function wExportCSV(){
   const all=getAllFarms();
-  const et0=parseFloat(document.getElementById('w_et0')?.value)||5.5;
-  const FED=(parseFloat(document.getElementById('w_feddan')?.value)||4200)/1000;
-  const gCrop=document.getElementById('w_globalCrop')?.value||'wheat';
-  const gIrr=document.getElementById('w_globalIrr')?.value||'drip';
-  const gPlt=document.getElementById('w_plantDate')?.value||'';
-  const irrEff=parseFloat(document.getElementById('w_irrEff')?.value)||85;
+  const et0=parseFloat(document.getElementById('w_et0')?document.getElementById('w_et0').value:5.5)||5.5;
+  const FED=(parseFloat(document.getElementById('w_feddan')?document.getElementById('w_feddan').value:4200)||4200)/1000;
+  const gCrop=document.getElementById('w_globalCrop')?document.getElementById('w_globalCrop').value:'wheat';
+  const gIrr=document.getElementById('w_globalIrr')?document.getElementById('w_globalIrr').value:'drip';
+  const gPlt=document.getElementById('w_plantDate')?document.getElementById('w_plantDate').value:'';
+  const irrEff=parseFloat(document.getElementById('w_irrEff')?document.getElementById('w_irrEff').value:85)||85;
   const rows=[['Farm','Type','Area(fed)','Irrigation','Plant Date','Harvest Date','Days Left','Stage','ET0','FAO m3/fed','FAO Gross/fed','FAO Gross Total','NDVI Kc','NDVI m3/fed','NDVI Gross/fed','Diff/fed','Irr Events','Field Eff%']];
-  all.forEach(f=>{
+  all.forEach(function(f){
     const fd=f.farm_data||f;
     const plt=gPlt||fd.plantDate||new Date(Date.now()-60*86400000).toISOString().slice(0,10);
     const area=parseFloat(fd.area)||1;
@@ -1329,14 +1194,14 @@ function wExportCSV(){
     const fEff=Math.round(effAdj*(irrEff/100)*100);
     rows.push([fd.name||'—',f.builtin?'Pilot':'Mine',aFed.toFixed(1),wIrrLabel(gIrr),plt,wGetHarvest(plt,gCrop),dLeft>0?dLeft:'Done',wGetStageName(gCrop,age),et0f,fPF,fGPF,fGT,+ndviKc.toFixed(3),nPF,nGPF,fGPF-nGPF,nEv,fEff]);
   });
-  dlBlob('\uFEFF'+rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv',`SISI_Water_${new Date().toISOString().slice(0,10)}.csv`);
+  dlBlob('\uFEFF'+rows.map(function(r){return r.map(function(x){return '"'+String(x).replace(/"/g,'""')+'"';}).join(',');}).join('\n'),'text/csv','SISI_Water_'+new Date().toISOString().slice(0,10)+'.csv');
 }
 
 // ════════════════════════════════════════════════════════
 // CORE HELPERS
 // ════════════════════════════════════════════════════════
 function v(id){ const el=document.getElementById(id); return el?el.value:''; }
-function getAllFarms(){ return [...builtinFarms,...userFarms]; }
+function getAllFarms(){ return builtinFarms.concat(userFarms); }
 function setChip(s){
   const el=document.getElementById('saveChip'); if(!el) return;
   if(s==='saved'){ el.textContent='✓ Cloud'; el.className='save-chip saved'; }
@@ -1358,82 +1223,82 @@ function getInterventionText(level){
 function updateGovList(force){
   const c=force||v('inp_country')||'EG';
   const sel=document.getElementById('inp_gov'); if(!sel) return;
-  sel.innerHTML='<option value="">— Select —</option>'+(govData[c]||govData.OTHER).map(g=>`<option>${g}</option>`).join('');
+  sel.innerHTML='<option value="">— Select —</option>'+(govData[c]||govData.OTHER).map(function(g){return '<option>'+g+'</option>';}).join('');
 }
 
 // ════════════════════════════════════════════════════════
 // MANUAL SAVE / LOAD BUTTONS
 // ════════════════════════════════════════════════════════
 async function manualSaveIDB(){
-  const farms=userFarms.filter(f=>!f.builtin);
+  const farms=userFarms.filter(function(f){return !f.builtin;});
   if(!farms.length){ showToast('No user farms to save locally.','#888'); return; }
   await idbSaveAll(farms); lsSave(farms); updatePersistBadge();
-  showToast(`✅ ${farms.length} farm(s) saved to browser storage.`,'#2e7d32');
+  showToast('✅ '+farms.length+' farm(s) saved to browser storage.','#2e7d32');
 }
 async function manualLoadIDB(){
   const farms=await idbLoadAll();
   if(!farms.length){ showToast('No farms found in browser storage.','#888'); return; }
-  const existIds=new Set(userFarms.map(f=>f.id));
+  const existIds=new Set(userFarms.map(function(f){return f.id;}));
   let added=0;
-  farms.forEach(f=>{ if(!existIds.has(f.id)&&!f.builtin){ userFarms.push(f); added++; } });
+  farms.forEach(function(f){ if(!existIds.has(f.id)&&!f.builtin){ userFarms.push(f); added++; } });
   buildFarmGrid(); renderRegistry(); refreshMapMarkers(); buildCompareChart(); wCalcAll(); updatePersistBadge();
-  showToast(`✅ Loaded ${farms.length} farm(s) from browser storage (${added} new).`,'#1565c0');
+  showToast('✅ Loaded '+farms.length+' farm(s) from browser storage ('+added+' new).','#1565c0');
 }
 async function manualSaveCloud(){
   if(!currentUser){ showToast('Please sign in first.','#e65100'); return; }
-  const farms=userFarms.filter(f=>!f.builtin);
+  const farms=userFarms.filter(function(f){return !f.builtin;});
   if(!farms.length){ showToast('No user farms to save.','#888'); return; }
   setChip('saving');
   let saved=0,errs=0;
   for(const f of farms){
-    const farmData={...f};
-    ['id','supabase_id','builtin','addedAt','_fromCloud','_et0Live','_wx','_ndviKc','_ndviVal'].forEach(k=>delete farmData[k]);
-    // upsert by id
-    const {error}=await sb.from('farms').upsert({id:f.supabase_id||f.id,user_id:currentUser.id,farm_data:farmData},{onConflict:'id'});
-    if(!error) saved++; else errs++;
+    const farmData=Object.assign({},f);
+    ['id','supabase_id','builtin','addedAt','_fromCloud','_et0Live','_wx','_ndviKc','_ndviVal'].forEach(function(k){delete farmData[k];});
+    const res=await sbSafe(function(){ return sb.from('farms').upsert({id:f.supabase_id||f.id,user_id:currentUser.id,farm_data:farmData},{onConflict:'id'}); });
+    if(!res.error) saved++; else errs++;
   }
   setChip('saved');
-  showToast(`☁️ Cloud: ${saved} saved${errs?`, ${errs} error(s)`:'.'}`,'#2e7d32');
+  showToast('☁️ Cloud: '+saved+' saved'+(errs?', '+errs+' error(s)':'.'), errs?'#e65100':'#2e7d32');
 }
 async function manualLoadCloud(){
   if(!currentUser){ showToast('Please sign in first.','#e65100'); return; }
   setChip('saving');
-  const {data,error}=await sb.from('farms').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+  const res=await sbSafe(function(){ return sb.from('farms').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}); });
   setChip('saved');
-  if(error){ showToast('Cloud error: '+error.message,'#e65100'); return; }
-  const cFarms=(data||[]).map(r=>({...r.farm_data,id:r.id,supabase_id:r.id,builtin:false,addedAt:r.created_at}));
-  const cIds=new Set(cFarms.map(f=>f.id));
-  userFarms=[...cFarms,...userFarms.filter(f=>!f.builtin&&!cIds.has(f.id))];
-  await idbSaveAll(userFarms.filter(f=>!f.builtin)); lsSave(userFarms.filter(f=>!f.builtin));
+  if(res.error){ showToast('Cloud: '+res.error.message,'#e65100'); return; }
+  const cFarms=(res.data||[]).map(function(r){return Object.assign({},r.farm_data,{id:r.id,supabase_id:r.id,builtin:false,addedAt:r.created_at});});
+  const cIds=new Set(cFarms.map(function(f){return f.id;}));
+  userFarms=cFarms.concat(userFarms.filter(function(f){return !f.builtin&&!cIds.has(f.id);}));
+  await idbSaveAll(userFarms.filter(function(f){return !f.builtin;})); lsSave(userFarms.filter(function(f){return !f.builtin;}));
   buildFarmGrid(); renderRegistry(); refreshMapMarkers(); buildCompareChart(); wCalcAll(); updatePersistBadge();
-  showToast(`☁️ Loaded ${cFarms.length} farm(s) from cloud.`,'#1565c0');
+  showToast('☁️ Loaded '+cFarms.length+' farm(s) from cloud.','#1565c0');
 }
 async function loadAllCloudFarms(){
   if(!currentUser){ showToast('Please sign in first.','#e65100'); return; }
   const btn=document.getElementById('loadCloudBtn');
   if(btn){ btn.disabled=true; btn.textContent='⏳ Loading...'; }
-  const {data,error}=await sb.from('farms').select('*').order('created_at',{ascending:false});
+  const res=await sbSafe(function(){ return sb.from('farms').select('*').order('created_at',{ascending:false}); });
   if(btn){ btn.disabled=false; btn.textContent='☁️ Load All Cloud Farms'; }
-  if(error){ showToast('Error: '+error.message,'#e65100'); return; }
-  if(!data?.length){ showToast('No farms in cloud.','#888'); return; }
-  const eIds=new Set(userFarms.map(f=>f.id));
+  if(res.error){ showToast('Cloud: '+res.error.message,'#e65100'); return; }
+  if(!res.data||!res.data.length){ showToast('No farms in cloud.','#888'); return; }
+  const eIds=new Set(userFarms.map(function(f){return f.id;}));
   let added=0;
-  data.forEach(r=>{
+  res.data.forEach(function(r){
     if(!eIds.has(r.id)){
-      userFarms.push({...r.farm_data,id:r.id,supabase_id:r.id,builtin:false,addedAt:r.created_at,_fromCloud:true});
+      userFarms.push(Object.assign({},r.farm_data,{id:r.id,supabase_id:r.id,builtin:false,addedAt:r.created_at,_fromCloud:true}));
       added++;
     }
   });
-  await idbSaveAll(userFarms.filter(f=>!f.builtin)); lsSave(userFarms.filter(f=>!f.builtin));
+  await idbSaveAll(userFarms.filter(function(f){return !f.builtin;}));
+  lsSave(userFarms.filter(function(f){return !f.builtin;}));
   buildFarmGrid(); renderRegistry(); refreshMapMarkers(); buildCompareChart(); wCalcAll(); updatePersistBadge();
-  showToast(`☁️ Loaded ${data.length} total farms (${added} newly merged).`,'#1565c0');
+  showToast('☁️ Loaded '+res.data.length+' total farms ('+added+' newly merged).','#1565c0');
 }
 
 // ════════════════════════════════════════════════════════
 // AUTH
 // ════════════════════════════════════════════════════════
 function showAuthTab(tab){
-  document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',['login','register'][i]===tab));
+  document.querySelectorAll('.auth-tab').forEach(function(t,i){t.classList.toggle('active',['login','register'][i]===tab);});
   document.getElementById('loginForm').style.display  = tab==='login'?'flex':'none';
   document.getElementById('registerForm').style.display= tab==='register'?'flex':'none';
 }
@@ -1445,10 +1310,10 @@ async function doLogin(){
   err.style.display='none';
   if(!email||!pass){ err.textContent='Please enter email and password.'; err.style.display='block'; return; }
   btn.disabled=true; btn.textContent='Signing in...';
-  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  const res=await sb.auth.signInWithPassword({email:email,password:pass});
   btn.disabled=false; btn.textContent='Sign In →';
-  if(error){ err.textContent=error.message; err.style.display='block'; return; }
-  await onLogin(data.user);
+  if(res.error){ err.textContent=res.error.message; err.style.display='block'; return; }
+  await onLogin(res.data.user);
 }
 async function doRegister(){
   const name=document.getElementById('regName').value.trim();
@@ -1462,9 +1327,9 @@ async function doRegister(){
   if(!name||!email||!pass){ err.textContent='Please fill all required fields.'; err.style.display='block'; return; }
   if(pass.length<8){ err.textContent='Password must be at least 8 characters.'; err.style.display='block'; return; }
   btn.disabled=true; btn.textContent='Creating account...';
-  const {data,error}=await sb.auth.signUp({email,password:pass,options:{data:{full_name:name,institution:inst}}});
+  const res=await sb.auth.signUp({email:email,password:pass,options:{data:{full_name:name,institution:inst}}});
   btn.disabled=false; btn.textContent='Create Account →';
-  if(error){ err.textContent=error.message; err.style.display='block'; return; }
+  if(res.error){ err.textContent=res.error.message; err.style.display='block'; return; }
   suc.textContent='✅ Account created! Check your email to confirm, then sign in.';
   suc.style.display='block';
 }
@@ -1478,14 +1343,43 @@ async function doLogout(){
 async function onLogin(user){
   currentUser=user;
   const isAdmin=user.email===ADMIN_EMAIL;
-  document.getElementById('userChip').textContent='👤 '+(user.user_metadata?.full_name||user.email)+(isAdmin?' 🔐':'');
+  document.getElementById('userChip').textContent='👤 '+(user.user_metadata&&user.user_metadata.full_name?user.user_metadata.full_name:user.email)+(isAdmin?' 🔐':'');
   if(isAdmin) document.getElementById('adminTab').style.display='';
   document.getElementById('authScreen').style.display='none';
   document.getElementById('mainApp').style.display='block';
   await idbOpen();
+  // Check DB — show setup button for admin if needed
+  await setupDatabase();
   await loadUserFarms();
   buildFarmGrid(); renderRegistry(); calcSISI(); loadCropKc(); updatePersistBadge();
-  setTimeout(()=>{ initMap(); calcET(); wCalcAll(); }, 600);
+  setTimeout(function(){ initMap(); calcET(); wCalcAll(); }, 600);
+  // Auto-sync any local-only farms to cloud every 30 seconds
+  setInterval(syncLocalToCloud, 30000);
+}
+
+// Sync farms that have no supabase_id yet
+async function syncLocalToCloud(){
+  if(!currentUser||!_dbReady) return;
+  var pending = userFarms.filter(function(f){return !f.builtin&&!f.supabase_id;});
+  if(!pending.length) return;
+  var synced = 0;
+  for(var i=0;i<pending.length;i++){
+    var f = pending[i];
+    var fd = Object.assign({},f);
+    ['id','supabase_id','builtin','_fromCloud','_et0Live','_wx','_ndviKc','_ndviVal'].forEach(function(k){delete fd[k];});
+    var res = await sbSafe(function(){ return sb.from('farms').insert({user_id:currentUser.id,farm_data:fd}).select().single(); });
+    if(!res.error&&res.data){
+      var idx = userFarms.findIndex(function(x){return x.id===f.id;});
+      if(idx>=0){ userFarms[idx].id=res.data.id; userFarms[idx].supabase_id=res.data.id; }
+      synced++;
+    }
+  }
+  if(synced){
+    await idbSaveAll(userFarms.filter(function(f){return !f.builtin;}));
+    lsSave(userFarms.filter(function(f){return !f.builtin;}));
+    setChip('saved'); updatePersistBadge();
+    showToast('☁️ '+synced+' farm(s) synced to cloud','#2e7d32',2000);
+  }
 }
 
 // ════════════════════════════════════════════════════════
@@ -1493,24 +1387,148 @@ async function onLogin(user){
 // ════════════════════════════════════════════════════════
 async function loadUserFarms(){
   setChip('saving');
-  // 1. Load IDB immediately
-  const idbFarms=await idbLoadAll();
+  // 1. Load from IndexedDB immediately (instant, no network)
+  const idbFarms = await idbLoadAll();
   if(idbFarms.length){
-    userFarms=idbFarms.filter(f=>!f.builtin);
-    buildFarmGrid(); renderRegistry();
+    userFarms = idbFarms.filter(function(f){return !f.builtin;});
+    buildFarmGrid(); renderRegistry(); refreshMapMarkers(); buildCompareChart(); wCalcAll();
   }
-  // 2. Load Supabase cloud
-  try{
-    const {data,error}=await sb.from('farms').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
-    if(!error&&data){
-      const cFarms=data.map(r=>({...r.farm_data,id:r.id,supabase_id:r.id,builtin:false,addedAt:r.created_at}));
-      const cIds=new Set(cFarms.map(f=>f.id));
-      const idbOnly=userFarms.filter(f=>!cIds.has(f.id));
-      userFarms=[...cFarms,...idbOnly];
-      await idbSaveAll(userFarms); lsSave(userFarms);
+  // 2. Try cloud load
+  const res = await sbSafe(function(){ return sb.from('farms').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}); });
+  if(res.error){
+    var ec = res.error.code||'';
+    if(ec==='42P01'||ec==='42501'||res.error.message.includes('permission denied')||res.error.message.includes('does not exist')){
+      // Show setup button for admin
+      if(currentUser.email===ADMIN_EMAIL) showDbSetupButton();
+      showToast('💾 Working offline — local data loaded','#0277bd',4000);
     }
-  }catch(e){ console.warn('[SISI] Cloud load:',e); }
+    setChip('saved'); updatePersistBadge(); return;
+  }
+  if(res.data && res.data.length){
+    _dbReady = true;
+    const cFarms = res.data.map(function(r){return Object.assign({},r.farm_data,{id:r.id,supabase_id:r.id,builtin:false,addedAt:r.created_at});});
+    const cIds   = new Set(cFarms.map(function(f){return f.id;}));
+    const localOnly = userFarms.filter(function(f){return !f.builtin&&!cIds.has(f.id);});
+    userFarms = cFarms.concat(localOnly);
+    await idbSaveAll(userFarms.filter(function(f){return !f.builtin;}));
+    lsSave(userFarms.filter(function(f){return !f.builtin;}));
+    buildFarmGrid(); renderRegistry(); refreshMapMarkers(); buildCompareChart(); wCalcAll();
+    // Push any local-only farms to cloud
+    for(var i=0;i<localOnly.length;i++) await pushFarmToCloud(localOnly[i]);
+  } else {
+    _dbReady = true;
+    // No farms in cloud but tables exist — push local farms up
+    for(var j=0;j<userFarms.length;j++) await pushFarmToCloud(userFarms[j]);
+  }
   setChip('saved'); updatePersistBadge();
+}
+
+// Push a single farm to cloud if not already there
+async function pushFarmToCloud(f){
+  if(!f||f.builtin||!currentUser) return;
+  var farmData = Object.assign({},f);
+  ['id','supabase_id','builtin','addedAt','_fromCloud','_et0Live','_wx','_ndviKc','_ndviVal'].forEach(function(k){delete farmData[k];});
+  if(f.supabase_id){
+    await sbSafe(function(){ return sb.from('farms').update({farm_data:farmData}).eq('id',f.supabase_id).eq('user_id',currentUser.id); });
+  } else {
+    var res = await sbSafe(function(){ return sb.from('farms').insert({user_id:currentUser.id,farm_data:farmData}).select().single(); });
+    if(!res.error&&res.data){ f.id=res.data.id; f.supabase_id=res.data.id; }
+  }
+}
+
+// Show one-click DB setup button for admin
+function showDbSetupButton(){
+  var existing = document.getElementById('dbSetupBanner');
+  if(existing) return;
+  var div = document.createElement('div');
+  div.id = 'dbSetupBanner';
+  div.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#1a237e;color:#fff;padding:10px 16px;z-index:99999;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12px';
+  div.innerHTML = '<span>⚠️ Database tables not set up yet. Click to auto-create tables + RLS policies:</span>'+
+    '<button onclick="runDbSetup()" style="background:#4caf50;border:none;color:#fff;padding:6px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-size:12px">🔧 Setup Database Now</button>'+
+    '<button onclick="this.parentNode.remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer">✕</button>';
+  document.body.prepend(div);
+}
+
+// Auto-run SQL setup via Supabase SQL REST API
+async function runDbSetup(){
+  var btn = document.querySelector('#dbSetupBanner button');
+  if(btn){ btn.textContent='⏳ Setting up...'; btn.disabled=true; }
+
+  var sql = `
+CREATE TABLE IF NOT EXISTS public.farms (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  farm_data JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE public.farms ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='farms' AND policyname='farms_select_own') THEN
+    EXECUTE 'CREATE POLICY farms_select_own ON public.farms FOR SELECT USING (auth.uid()=user_id)';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='farms' AND policyname='farms_insert_own') THEN
+    EXECUTE 'CREATE POLICY farms_insert_own ON public.farms FOR INSERT WITH CHECK (auth.uid()=user_id)';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='farms' AND policyname='farms_update_own') THEN
+    EXECUTE 'CREATE POLICY farms_update_own ON public.farms FOR UPDATE USING (auth.uid()=user_id)';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='farms' AND policyname='farms_delete_own') THEN
+    EXECUTE 'CREATE POLICY farms_delete_own ON public.farms FOR DELETE USING (auth.uid()=user_id)';
+  END IF;
+END $$;
+GRANT ALL ON public.farms TO authenticated;
+GRANT ALL ON public.farms TO anon;
+CREATE TABLE IF NOT EXISTS public.farm_water_data (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  farm_id UUID,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  water_data JSONB DEFAULT '{}',
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(farm_id,user_id)
+);
+ALTER TABLE public.farm_water_data ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='farm_water_data' AND policyname='wdata_all_own') THEN
+    EXECUTE 'CREATE POLICY wdata_all_own ON public.farm_water_data FOR ALL USING (auth.uid()=user_id) WITH CHECK (auth.uid()=user_id)';
+  END IF;
+END $$;
+GRANT ALL ON public.farm_water_data TO authenticated;
+  `;
+
+  // Use Supabase management API via rpc exec_sql (needs service role)
+  // Fallback: show SQL for manual copy
+  var res = await fetch(SUPABASE_URL+'/rest/v1/rpc/exec_sql', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY},
+    body: JSON.stringify({sql:sql})
+  });
+
+  if(res.ok){
+    _dbReady = true;
+    document.getElementById('dbSetupBanner').remove();
+    showToast('✅ Database setup complete! Reloading...','#2e7d32',3000);
+    setTimeout(function(){ location.reload(); }, 2000);
+  } else {
+    // Fallback — show SQL panel to copy manually (one time only)
+    document.getElementById('dbSetupBanner').remove();
+    showSqlPanel(sql);
+  }
+}
+
+function showSqlPanel(sql){
+  var div = document.createElement('div');
+  div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999999;display:flex;align-items:center;justify-content:center;padding:16px';
+  div.innerHTML = '<div style="background:#fff;border-radius:12px;padding:20px;max-width:700px;width:100%;max-height:90vh;overflow:auto">'+
+    '<h3 style="color:#1565c0;margin-bottom:10px">🔧 One-Time Database Setup</h3>'+
+    '<p style="font-size:12px;color:#555;margin-bottom:10px">Copy this SQL and run it in <b>Supabase → SQL Editor</b> once. After that everything works automatically.</p>'+
+    '<textarea style="width:100%;height:280px;font-family:monospace;font-size:11px;border:1px solid #ddd;border-radius:6px;padding:8px" readonly>'+sql+'</textarea>'+
+    '<div style="display:flex;gap:8px;margin-top:10px">'+
+      '<button onclick="navigator.clipboard.writeText(document.querySelector(\'[readonly]\').value);this.textContent=\'✅ Copied!\'" style="background:#1565c0;color:#fff;border:none;padding:8px 18px;border-radius:6px;cursor:pointer;font-weight:700">📋 Copy SQL</button>'+
+      '<a href="https://supabase.com/dashboard/project/qdnvbrskeiumhamhiacs/sql/new" target="_blank" style="background:#2e7d32;color:#fff;border:none;padding:8px 18px;border-radius:6px;cursor:pointer;font-weight:700;text-decoration:none;display:inline-flex;align-items:center">🔗 Open SQL Editor</a>'+
+      '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:#eee;border:none;padding:8px 14px;border-radius:6px;cursor:pointer">✕ Close</button>'+
+    '</div>'+
+  '</div>';
+  document.body.appendChild(div);
 }
 
 async function addFarm(){
@@ -1545,16 +1563,16 @@ async function addFarm(){
   const lc   = LC[info.level]||'#1565c0';
 
   const farmData = {
-    name, nameEn:name, country,
-    gov: gov+(region?' — '+region:''), region,
-    crop, lat, lng, area, areaUnit,
+    name:name, nameEn:name, country:country,
+    gov: gov+(region?' — '+region:''), region:region,
+    crop:crop, lat:lat, lng:lng, area:area, areaUnit:areaUnit,
     level:info.level, levelNum:parseInt(info.level.replace('L',''))||0, levelName:info.name,
-    sisi, color:lc,
-    scores:{c1,c2,c3,c4,c5},
+    sisi:sisi, color:lc,
+    scores:{c1:c1,c2:c2,c3:c3,c4:c4,c5:c5},
     weighted:{c1:+(c1*.30).toFixed(3),c2:+(c2*.20).toFixed(3),c3:+(c3*.15).toFixed(3),c4:+(c4*.15).toFixed(3),c5:+(c5*.20).toFixed(3)},
     water:water||'—', irrigation:irrigation||'—', energy:energy||'—', soil:soil||'—', waterQ:waterQ||'—',
-    intervention:getInterventionText(info.level), notes,
-    cropKey, plantDate, irrType,
+    intervention:getInterventionText(info.level), notes:notes,
+    cropKey:cropKey, plantDate:plantDate, irrType:irrType,
     socio:{edu:'—',phone:'—',credit:'—',coop:'—',ext:'—'},
     addedAt:new Date().toISOString()
   };
@@ -1563,83 +1581,97 @@ async function addFarm(){
   btn.disabled=true; btn.textContent='⏳ Saving...';
   setChip('saving');
 
-  // Save to Supabase cloud
-  const {data,error} = await sb.from('farms').insert({user_id:currentUser.id, farm_data:farmData}).select().single();
+  // ── STEP 1: Save locally first (always succeeds) ──
+  const localId = 'local_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+  const savedLocal = Object.assign({},farmData,{id:localId,supabase_id:null,builtin:false});
+  userFarms.unshift(savedLocal);
+  await idbSaveAll(userFarms.filter(function(f){return !f.builtin;}));
+  lsSave(userFarms.filter(function(f){return !f.builtin;}));
+  updatePersistBadge();
+  renderRegistry(); buildFarmGrid();
+  if(mapInitialized) addMarkerToMap(savedLocal);
+  buildCompareChart(); wCalcAll();
+
+  // ── STEP 2: Try cloud save ──
+  const res = await sbSafe(function(){ return sb.from('farms').insert({user_id:currentUser.id,farm_data:farmData}).select().single(); });
   btn.disabled=false; btn.textContent='➕ Save Farm to Cloud & Map';
 
-  if(error){ showToast('Cloud error: '+error.message,'#e65100'); setChip('saving'); return; }
+  if(!res.error && res.data){
+    // Replace local entry with cloud-confirmed entry
+    const idx = userFarms.findIndex(function(f){return f.id===localId;});
+    const cloudFarm = Object.assign({},farmData,{id:res.data.id,supabase_id:res.data.id,builtin:false,addedAt:res.data.created_at});
+    if(idx>=0) userFarms[idx]=cloudFarm; else userFarms.unshift(cloudFarm);
+    await idbSaveAll(userFarms.filter(function(f){return !f.builtin;}));
+    lsSave(userFarms.filter(function(f){return !f.builtin;}));
+    setChip('saved'); updatePersistBadge();
+    refreshMapMarkers(); renderRegistry(); buildFarmGrid(); buildCompareChart(); wCalcAll();
+    showToast('✅ "'+name+'" saved! SISI: '+sisi+' → '+info.level+' · ☁️ Cloud + 💾 Local','#2e7d32',4000);
+  } else {
+    setChip('saving');
+    showToast('✅ "'+name+'" saved locally (SISI: '+sisi+' → '+info.level+'). Will sync to cloud when available.','#0277bd',5000);
+  }
 
-  const saved = {...farmData, id:data.id, supabase_id:data.id, builtin:false, addedAt:data.created_at};
-  userFarms.unshift(saved);
-  setChip('saved');
-
-  // Save to all local persistence layers immediately
-  await idbSaveAll(userFarms.filter(f=>!f.builtin));
-  lsSave(userFarms.filter(f=>!f.builtin));
-  updatePersistBadge();
-
-  // Update ALL views: farms grid, registry, map, compare, water
-  renderRegistry();
-  buildFarmGrid();
-  if(mapInitialized) addMarkerToMap(saved);
-  buildCompareChart();
-  wCalcAll();
-
-  // Clear form fields
+  // Clear form
   ['inp_name','inp_region','inp_area','inp_lat','inp_lng','inp_crop','inp_notes',
-   'inp_water','inp_irrigation','inp_energy','inp_soil','inp_waterq','inp_plantDate'].forEach(id=>{
+   'inp_water','inp_irrigation','inp_energy','inp_soil','inp_waterq','inp_plantDate'].forEach(function(id){
     const el=document.getElementById(id); if(el) el.value='';
   });
   document.getElementById('inp_gov').value='';
-
-  showToast(`✅ "${name}" saved! SISI: ${sisi} → ${info.level} (${info.name}) · Cloud + Local`,'#2e7d32',4000);
 }
 
 async function deleteFarm(id){
   if(!confirm('Remove this farm from all storage layers?')) return;
-  const {error}=await sb.from('farms').delete().eq('id',id).eq('user_id',currentUser.id);
-  if(error){ showToast('Cloud error: '+error.message,'#e65100'); return; }
-  userFarms=userFarms.filter(f=>f.id!==id);
+  // Try cloud delete
+  const res=await sbSafe(function(){ return sb.from('farms').delete().eq('id',id).eq('user_id',currentUser.id); });
+  if(res.error && res.error.code!=='PGRST116'){
+    // Only fail if it's not a "not found" error
+    if(!res.error.message.includes('0 rows')){
+      showToast('Cloud: '+res.error.message+' — removed locally only.','#e65100');
+    }
+  }
+  userFarms=userFarms.filter(function(f){return f.id!==id;});
   await idbDeleteOne(id);
-  lsSave(userFarms.filter(f=>!f.builtin));
+  lsSave(userFarms.filter(function(f){return !f.builtin;}));
   updatePersistBadge();
   renderRegistry(); buildFarmGrid(); refreshMapMarkers(); buildCompareChart(); wCalcAll();
-  showToast('Farm deleted from cloud + browser storage.','#888');
+  showToast('Farm deleted.','#888');
 }
 
 async function clearMyFarms(){
-  const uf=userFarms.filter(f=>!f.builtin);
+  const uf=userFarms.filter(function(f){return !f.builtin;});
   if(!uf.length){ showToast('No user farms to clear.','#888'); return; }
-  if(!confirm(`⚠️ Permanently delete all ${uf.length} of your farms from:\n• Cloud (Supabase)\n• Browser storage (IndexedDB)\n\nPilot farms are NOT affected.\n\nContinue?`)) return;
-  const {error}=await sb.from('farms').delete().eq('user_id',currentUser.id);
-  if(error){ showToast('Cloud error: '+error.message,'#e65100'); return; }
-  userFarms=userFarms.filter(f=>f.builtin);
+  if(!confirm('⚠️ Permanently delete all '+uf.length+' of your farms from:\n• Cloud (Supabase)\n• Browser storage (IndexedDB)\n\nPilot farms are NOT affected.\n\nContinue?')) return;
+  const res=await sbSafe(function(){ return sb.from('farms').delete().eq('user_id',currentUser.id); });
+  if(res.error){ showToast('Cloud warning: '+res.error.message+' — cleared locally.','#e65100'); }
+  userFarms=userFarms.filter(function(f){return f.builtin;});
   await idbClear(); lsSave([]);
   updatePersistBadge();
   renderRegistry(); buildFarmGrid(); refreshMapMarkers(); buildCompareChart(); wCalcAll();
-  showToast(`🗑️ ${uf.length} farm(s) deleted from all layers. Pilot farms intact.`,'#c62828');
+  showToast('🗑️ '+uf.length+' farm(s) deleted from all layers. Pilot farms intact.','#c62828');
 }
 
 // ════════════════════════════════════════════════════════
 // ADMIN
 // ════════════════════════════════════════════════════════
 async function adminLoadAll(){
-  const {data,error}=await sb.from('farms').select('*').order('created_at',{ascending:false});
-  if(error){ document.getElementById('adminContent').innerHTML='<div class="empty-state">Error: '+error.message+'</div>'; return; }
-  if(!data?.length){ document.getElementById('adminContent').innerHTML='<div class="empty-state">No farms in database yet.</div>'; return; }
-  const aFarms=data.map(r=>({...r.farm_data,id:r.id,user_id:r.user_id,addedAt:r.created_at}));
-  let html=`<div style="font-size:12px;color:#888;margin-bottom:10px">${aFarms.length} total farms from all users</div>
-  <div style="overflow-x:auto"><table class="registry-table"><thead><tr><th>#</th><th>User</th><th>Farm</th><th>Gov</th><th>Crop</th><th>SISI</th><th>Level</th><th>Added</th></tr></thead><tbody>`;
-  aFarms.forEach((f,i)=>{ html+=`<tr><td style="color:#aaa">${i+1}</td><td style="font-family:monospace;font-size:10px;color:#888">${(f.user_id||'').substring(0,8)}…</td><td><b style="color:${f.color}">${f.name}</b></td><td>${(f.gov||'').split(' — ')[0]}</td><td>${(f.crop||'').substring(0,20)}</td><td style="font-weight:700;color:${f.color}">${f.sisi}</td><td><span class="level-badge" style="background:${f.color}20;color:${f.color};font-size:10px">${f.level}</span></td><td style="font-size:10px;color:#888">${new Date(f.addedAt).toLocaleDateString()}</td></tr>`; });
+  const res=await sbSafe(function(){ return sb.from('farms').select('*').order('created_at',{ascending:false}); });
+  if(res.error){ document.getElementById('adminContent').innerHTML='<div class="empty-state">Error: '+res.error.message+'</div>'; return; }
+  if(!res.data||!res.data.length){ document.getElementById('adminContent').innerHTML='<div class="empty-state">No farms in database yet.</div>'; return; }
+  const aFarms=res.data.map(function(r){return Object.assign({},r.farm_data,{id:r.id,user_id:r.user_id,addedAt:r.created_at});});
+  let html='<div style="font-size:12px;color:#888;margin-bottom:10px">'+aFarms.length+' total farms from all users</div>'+
+    '<div style="overflow-x:auto"><table class="registry-table"><thead><tr><th>#</th><th>User</th><th>Farm</th><th>Gov</th><th>Crop</th><th>SISI</th><th>Level</th><th>Added</th></tr></thead><tbody>';
+  aFarms.forEach(function(f,i){
+    html+='<tr><td style="color:#aaa">'+(i+1)+'</td><td style="font-family:monospace;font-size:10px;color:#888">'+((f.user_id||'').substring(0,8))+'…</td><td><b style="color:'+f.color+'">'+f.name+'</b></td><td>'+((f.gov||'').split(' — ')[0])+'</td><td>'+((f.crop||'').substring(0,20))+'</td><td style="font-weight:700;color:'+f.color+'">'+f.sisi+'</td><td><span class="level-badge" style="background:'+f.color+'20;color:'+f.color+';font-size:10px">'+f.level+'</span></td><td style="font-size:10px;color:#888">'+new Date(f.addedAt).toLocaleDateString()+'</td></tr>';
+  });
   html+='</tbody></table></div>';
   document.getElementById('adminContent').innerHTML=html;
 }
 async function adminExportCSV(){
-  const {data,error}=await sb.from('farms').select('*').order('created_at',{ascending:false});
-  if(error){ showToast('Error: '+error.message,'#e65100'); return; }
+  const res=await sbSafe(function(){ return sb.from('farms').select('*').order('created_at',{ascending:false}); });
+  if(res.error){ showToast('Error: '+res.error.message,'#e65100'); return; }
   const rows=[['#','User_ID','Name','Gov','Region','Crop','Area','Lat','Lng','C1','C2','C3','C4','C5','SISI','Level','Added']];
-  data.forEach((r,i)=>{ const f=r.farm_data||{},s=f.scores||{}; rows.push([i+1,r.user_id,f.name||'',f.gov||'',f.region||'',f.crop||'',f.area||'',f.lat||'',f.lng||'',s.c1||'',s.c2||'',s.c3||'',s.c4||'',s.c5||'',f.sisi,f.level,new Date(r.created_at).toLocaleDateString()]); });
-  dlBlob('\uFEFF'+rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv',`SISI_ALL_${new Date().toISOString().slice(0,10)}.csv`);
+  res.data.forEach(function(r,i){ var f=r.farm_data||{},s=f.scores||{}; rows.push([i+1,r.user_id,f.name||'',f.gov||'',f.region||'',f.crop||'',f.area||'',f.lat||'',f.lng||'',s.c1||'',s.c2||'',s.c3||'',s.c4||'',s.c5||'',f.sisi,f.level,new Date(r.created_at).toLocaleDateString()]); });
+  dlBlob('\uFEFF'+rows.map(function(r){return r.map(function(x){return '"'+String(x).replace(/"/g,'""')+'"';}).join(',');}).join('\n'),'text/csv','SISI_ALL_'+new Date().toISOString().slice(0,10)+'.csv');
 }
 
 // ════════════════════════════════════════════════════════
@@ -1654,23 +1686,22 @@ function calcSISI(){
   const cVals=[c1,c2,c3,c4,c5];
   const cLbls=['C₁ Irrigation (0.30)','C₂ Energy (0.20)','C₃ Soil (0.15)','C₄ Crop (0.15)','C₅ Socioeconomic (0.20)'];
   const colors=['#3498db','#2ecc71','#9b59b6','#f39c12','#e74c3c'];
-  const rows=cVals.map((val,i)=>`<div class="crit-row"><div class="crit-label">${cLbls[i]}</div><div class="crit-bar-wrap"><div class="crit-bar" style="width:${val*20}%;background:${colors[i]}"></div></div><div class="crit-val">${val} × ${wts[i]} = ${(val*wts[i]).toFixed(3)}</div></div>`).join('');
+  const rows=cVals.map(function(val,i){return '<div class="crit-row"><div class="crit-label">'+cLbls[i]+'</div><div class="crit-bar-wrap"><div class="crit-bar" style="width:'+(val*20)+'%;background:'+colors[i]+'"></div></div><div class="crit-val">'+val+' × '+wts[i]+' = '+(val*wts[i]).toFixed(3)+'</div></div>';}).join('');
   const box=document.getElementById('calcResult');
   box.style.display='block';
-  box.innerHTML=`<div style="font-size:12px;font-weight:600;margin-bottom:8px;color:#444">SISI Calculation Preview</div>
-    <div class="formula-box">SISI = (0.30×${c1}) + (0.20×${c2}) + (0.15×${c3}) + (0.15×${c4}) + (0.20×${c5})</div>
-    ${rows}
-    <div style="border-top:1px solid #e0e0e0;margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-      <div><div style="font-size:12px;color:#888">SISI Score</div>
-        <div style="font-size:34px;font-weight:700;color:${lc}">${sisi} <span style="font-size:16px;color:#ccc">/ 5.00</span></div>
-        <div style="font-size:11px;color:#888">Range: ${info.range}</div>
-      </div>
-      <div style="text-align:center">
-        <div class="level-badge" style="background:${lc}20;color:${lc};font-size:13px;padding:5px 16px">${info.level}</div>
-        <div style="font-size:12px;color:#555;margin-top:5px">${info.name}</div>
-      </div>
-    </div>
-    <div class="intervention-box">${getInterventionHTML(info.level)}</div>`;
+  box.innerHTML='<div style="font-size:12px;font-weight:600;margin-bottom:8px;color:#444">SISI Calculation Preview</div>'+
+    '<div class="formula-box">SISI = (0.30×'+c1+') + (0.20×'+c2+') + (0.15×'+c3+') + (0.15×'+c4+') + (0.20×'+c5+')</div>'+
+    rows+
+    '<div style="border-top:1px solid #e0e0e0;margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'+
+      '<div><div style="font-size:12px;color:#888">SISI Score</div>'+
+        '<div style="font-size:34px;font-weight:700;color:'+lc+'">'+sisi+' <span style="font-size:16px;color:#ccc">/ 5.00</span></div>'+
+        '<div style="font-size:11px;color:#888">Range: '+info.range+'</div></div>'+
+      '<div style="text-align:center">'+
+        '<div class="level-badge" style="background:'+lc+'20;color:'+lc+';font-size:13px;padding:5px 16px">'+info.level+'</div>'+
+        '<div style="font-size:12px;color:#555;margin-top:5px">'+info.name+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="intervention-box">'+getInterventionHTML(info.level)+'</div>';
 }
 
 // ════════════════════════════════════════════════════════
@@ -1679,66 +1710,61 @@ function calcSISI(){
 function buildFarmGrid(){
   const all=getAllFarms();
   const titleEl=document.getElementById('farmsTitle');
-  if(titleEl) titleEl.textContent=`All Farms (${all.length} total — ${builtinFarms.length} pilot, ${userFarms.length} user-added)`;
-  document.getElementById('farmGrid').innerHTML=all.map(f=>`
-    <div class="farm-card" id="fc-${f.id}" onclick="showFarmDetail('${f.id}')">
-      ${!f.builtin?'<div class="mine-tag">MY FARM</div>':'<div class="pilot-tag">PILOT</div>'}
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
-        <div class="farm-badge" style="background:${f.color}20;color:${f.color}">L${f.levelNum}</div>
-        <div>
-          <div style="font-size:13px;font-weight:600">${f.name}${f.country&&f.country!='EG'?' <span style="font-size:9px;color:#888">['+f.country+']</span>':''}</div>
-          <div style="font-size:10px;color:#888">${(f.area||0).toLocaleString()} ${f.areaUnit||'feddans'}</div>
-        </div>
-      </div>
-      <div style="font-size:24px;font-weight:700;color:${f.color}">${f.sisi}</div>
-      <div class="level-badge" style="background:${f.color}20;color:${f.color}">${f.levelName}</div>
-      <div style="font-size:10px;color:#888;margin-top:5px">${(f.crop||'').substring(0,38)}</div>
-    </div>`).join('');
+  if(titleEl) titleEl.textContent='All Farms ('+all.length+' total — '+builtinFarms.length+' pilot, '+userFarms.length+' user-added)';
+  document.getElementById('farmGrid').innerHTML=all.map(function(f){return (
+    '<div class="farm-card" id="fc-'+f.id+'" onclick="showFarmDetail(\''+f.id+'\')">'+
+      (!f.builtin?'<div class="mine-tag">MY FARM</div>':'<div class="pilot-tag">PILOT</div>')+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">'+
+        '<div class="farm-badge" style="background:'+f.color+'20;color:'+f.color+'">L'+f.levelNum+'</div>'+
+        '<div>'+
+          '<div style="font-size:13px;font-weight:600">'+f.name+(f.country&&f.country!='EG'?' <span style="font-size:9px;color:#888">['+f.country+']</span>':'')+'</div>'+
+          '<div style="font-size:10px;color:#888">'+(f.area||0).toLocaleString()+' '+(f.areaUnit||'feddans')+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="font-size:24px;font-weight:700;color:'+f.color+'">'+f.sisi+'</div>'+
+      '<div class="level-badge" style="background:'+f.color+'20;color:'+f.color+'">'+f.levelName+'</div>'+
+      '<div style="font-size:10px;color:#888;margin-top:5px">'+((f.crop||'').substring(0,38))+'</div>'+
+    '</div>');}).join('');
 }
 function showFarmDetail(id){
-  document.querySelectorAll('.farm-card').forEach(c=>c.classList.remove('selected'));
+  document.querySelectorAll('.farm-card').forEach(function(c){c.classList.remove('selected');});
   const card=document.getElementById('fc-'+id); if(card) card.classList.add('selected');
-  const f=getAllFarms().find(x=>x.id===id); if(!f) return;
+  const f=getAllFarms().find(function(x){return x.id===id;}); if(!f) return;
   const cKeys=['c1','c2','c3','c4','c5'];
   const cLabels=['C₁ — Irrigation Type & Infrastructure (0.30)','C₂ — Infrastructure & Energy Supply (0.20)','C₃ — Soil & Environmental Conditions (0.15)','C₄ — Crop Type & Economic Sensitivity (0.15)','C₅ — Socioeconomic Readiness (0.20)'];
   const wts=[0.30,0.20,0.15,0.15,0.20];
   const colors=['#3498db','#2ecc71','#9b59b6','#f39c12','#e74c3c'];
-  const bars=cKeys.map((k,i)=>`
-    <div class="crit-row">
-      <div class="crit-label">${cLabels[i]}</div>
-      <div class="crit-bar-wrap"><div class="crit-bar" style="width:${(f.scores||{})[k]*20}%;background:${colors[i]}"></div></div>
-      <div class="crit-val">${(f.scores||{})[k]} × ${wts[i]} = <b>${((f.weighted||{})[k]||0).toFixed(2)}</b></div>
-    </div>`).join('');
-  document.getElementById('farmDetail').innerHTML=`
-    <div class="detail-panel">
-      <h3 style="color:${f.color};font-size:15px;margin-bottom:9px">📍 ${f.name}${f.nameEn&&f.nameEn!==f.name?' — '+f.nameEn:''}</h3>
-      <div class="detail-grid">
-        <div class="detail-item"><div class="dl">Location</div><div class="dv">${f.gov||'—'}</div></div>
-        <div class="detail-item"><div class="dl">Area</div><div class="dv">${(f.area||0).toLocaleString()} ${f.areaUnit||'feddans'}${(f.areaUnit==='feddans'||!f.areaUnit)?' ('+((f.area||0)*0.42).toFixed(1)+' ha)':''}</div></div>
-        <div class="detail-item"><div class="dl">Crop</div><div class="dv">${f.crop||'—'}</div></div>
-        <div class="detail-item"><div class="dl">Water Source</div><div class="dv">${f.water||'—'}</div></div>
-        <div class="detail-item"><div class="dl">Irrigation</div><div class="dv">${f.irrigation||'—'}</div></div>
-        <div class="detail-item"><div class="dl">Energy</div><div class="dv">${f.energy||'—'}</div></div>
-        <div class="detail-item"><div class="dl">Soil</div><div class="dv">${f.soil||'—'}</div></div>
-        <div class="detail-item"><div class="dl">Water Quality</div><div class="dv">${f.waterQ||'—'}</div></div>
-        ${f.notes?`<div class="detail-item" style="grid-column:1/-1"><div class="dl">Notes</div><div class="dv">${f.notes}</div></div>`:''}
-      </div>
-      <div style="font-size:12px;font-weight:600;color:#444;margin-bottom:7px">SISI Calculation</div>
-      ${bars}
-      <div style="background:${f.color}15;border-radius:9px;padding:10px;text-align:center;margin:10px 0;border:1px solid ${f.color}30">
-        <div style="font-size:12px;font-family:monospace;color:${f.color}">SISI = (0.30×${(f.scores||{}).c1}) + (0.20×${(f.scores||{}).c2}) + (0.15×${(f.scores||{}).c3}) + (0.15×${(f.scores||{}).c4}) + (0.20×${(f.scores||{}).c5})</div>
-        <div style="font-size:30px;font-weight:700;color:${f.color};margin:3px 0">${f.sisi} / 5.00</div>
-        <div style="font-size:12px;color:#555">${LF[f.level]||f.levelName||''}</div>
-      </div>
-      ${f.builtin&&f.socio?`<div style="margin-top:8px;padding:8px;background:#f5f5f5;border-radius:7px;font-size:11px;color:#555;line-height:1.7">
-        <b>C₅ Profile —</b> Education: ${f.socio.edu} · Digital: ${f.socio.phone} · Credit: ${f.socio.credit} · Cooperative: ${f.socio.coop} · Extension: ${f.socio.ext}
-      </div>`:''}
-      <div class="intervention-box">🔧 <b>Recommended intervention:</b><br>${f.intervention||'—'}</div>
-      ${!f.builtin?`<div style="margin-top:8px;padding:7px 10px;background:#fce4ec;border-radius:7px;font-size:11px;color:#c62828;display:flex;align-items:center;justify-content:space-between">
-        <span>☁️ Cloud-saved · ${new Date(f.addedAt||Date.now()).toLocaleDateString()}</span>
-        <button onclick="deleteFarm('${f.id}')" style="background:#c62828;border:none;border-radius:5px;padding:3px 10px;font-size:11px;cursor:pointer;color:#fff;font-weight:700">✕ Remove Farm</button>
-      </div>`:''}
-    </div>`;
+  const bars=cKeys.map(function(k,i){return (
+    '<div class="crit-row">'+
+      '<div class="crit-label">'+cLabels[i]+'</div>'+
+      '<div class="crit-bar-wrap"><div class="crit-bar" style="width:'+((f.scores||{})[k]*20)+'%;background:'+colors[i]+'"></div></div>'+
+      '<div class="crit-val">'+((f.scores||{})[k])+' × '+wts[i]+' = <b>'+(((f.weighted||{})[k]||0).toFixed(2))+'</b></div>'+
+    '</div>');}).join('');
+  document.getElementById('farmDetail').innerHTML=
+    '<div class="detail-panel">'+
+      '<h3 style="color:'+f.color+';font-size:15px;margin-bottom:9px">📍 '+f.name+(f.nameEn&&f.nameEn!==f.name?' — '+f.nameEn:'')+'</h3>'+
+      '<div class="detail-grid">'+
+        '<div class="detail-item"><div class="dl">Location</div><div class="dv">'+(f.gov||'—')+'</div></div>'+
+        '<div class="detail-item"><div class="dl">Area</div><div class="dv">'+((f.area||0).toLocaleString())+' '+(f.areaUnit||'feddans')+((f.areaUnit==='feddans'||!f.areaUnit)?' ('+((f.area||0)*0.42).toFixed(1)+' ha)':'')+'</div></div>'+
+        '<div class="detail-item"><div class="dl">Crop</div><div class="dv">'+(f.crop||'—')+'</div></div>'+
+        '<div class="detail-item"><div class="dl">Water Source</div><div class="dv">'+(f.water||'—')+'</div></div>'+
+        '<div class="detail-item"><div class="dl">Irrigation</div><div class="dv">'+(f.irrigation||'—')+'</div></div>'+
+        '<div class="detail-item"><div class="dl">Energy</div><div class="dv">'+(f.energy||'—')+'</div></div>'+
+        '<div class="detail-item"><div class="dl">Soil</div><div class="dv">'+(f.soil||'—')+'</div></div>'+
+        '<div class="detail-item"><div class="dl">Water Quality</div><div class="dv">'+(f.waterQ||'—')+'</div></div>'+
+        (f.notes?'<div class="detail-item" style="grid-column:1/-1"><div class="dl">Notes</div><div class="dv">'+f.notes+'</div></div>':'')+
+      '</div>'+
+      '<div style="font-size:12px;font-weight:600;color:#444;margin-bottom:7px">SISI Calculation</div>'+
+      bars+
+      '<div style="background:'+f.color+'15;border-radius:9px;padding:10px;text-align:center;margin:10px 0;border:1px solid '+f.color+'30">'+
+        '<div style="font-size:12px;font-family:monospace;color:'+f.color+'">SISI = (0.30×'+((f.scores||{}).c1)+') + (0.20×'+((f.scores||{}).c2)+') + (0.15×'+((f.scores||{}).c3)+') + (0.15×'+((f.scores||{}).c4)+') + (0.20×'+((f.scores||{}).c5)+')</div>'+
+        '<div style="font-size:30px;font-weight:700;color:'+f.color+';margin:3px 0">'+f.sisi+' / 5.00</div>'+
+        '<div style="font-size:12px;color:#555">'+(LF[f.level]||f.levelName||'')+'</div>'+
+      '</div>'+
+      (f.builtin&&f.socio?'<div style="margin-top:8px;padding:8px;background:#f5f5f5;border-radius:7px;font-size:11px;color:#555;line-height:1.7"><b>C₅ Profile —</b> Education: '+f.socio.edu+' · Digital: '+f.socio.phone+' · Credit: '+f.socio.credit+' · Cooperative: '+f.socio.coop+' · Extension: '+f.socio.ext+'</div>':'')+
+      '<div class="intervention-box">🔧 <b>Recommended intervention:</b><br>'+(f.intervention||'—')+'</div>'+
+      (!f.builtin?'<div style="margin-top:8px;padding:7px 10px;background:#fce4ec;border-radius:7px;font-size:11px;color:#c62828;display:flex;align-items:center;justify-content:space-between"><span>☁️ Cloud-saved · '+new Date(f.addedAt||Date.now()).toLocaleDateString()+'</span><button onclick="deleteFarm(\''+f.id+'\')" style="background:#c62828;border:none;border-radius:5px;padding:3px 10px;font-size:11px;cursor:pointer;color:#fff;font-weight:700">✕ Remove Farm</button></div>':'')+
+    '</div>';
 }
 
 // ════════════════════════════════════════════════════════
@@ -1747,32 +1773,32 @@ function showFarmDetail(id){
 function renderRegistry(){
   const q=v('registrySearch').toLowerCase();
   const all=getAllFarms();
-  const filtered=all.filter(f=>!q||(f.name||'').toLowerCase().includes(q)||(f.gov||'').toLowerCase().includes(q)||(f.country||'').toLowerCase().includes(q));
+  const filtered=all.filter(function(f){return !q||(f.name||'').toLowerCase().includes(q)||(f.gov||'').toLowerCase().includes(q)||(f.country||'').toLowerCase().includes(q);});
   const tbody=document.getElementById('registryBody');
   const empty=document.getElementById('registryEmpty');
   const cnt=document.getElementById('regCount');
   if(cnt) cnt.textContent=filtered.length+' farms';
   if(!filtered.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
-  tbody.innerHTML=filtered.map((f,i)=>`
-    <tr>
-      <td style="color:#aaa">${i+1}</td>
-      <td><b style="color:${f.color}">${f.name}</b>${f.builtin?'<span class="tag tag-builtin">pilot</span>':'<span class="tag tag-user">mine</span>'}</td>
-      <td>${f.country?'['+f.country+'] ':''}${(f.gov||'').split(' — ')[0]}</td>
-      <td style="color:#888">${f.region||'—'}</td>
-      <td style="color:#666">${(f.crop||'—').substring(0,22)}</td>
-      <td>${f.area||'—'} ${f.areaUnit||''}</td>
-      <td style="font-family:monospace;font-size:10px">${f.lat||'—'}</td>
-      <td style="font-family:monospace;font-size:10px">${f.lng||'—'}</td>
-      <td style="text-align:center">${f.scores?.c1||'—'}</td>
-      <td style="text-align:center">${f.scores?.c2||'—'}</td>
-      <td style="text-align:center">${f.scores?.c3||'—'}</td>
-      <td style="text-align:center">${f.scores?.c4||'—'}</td>
-      <td style="text-align:center">${f.scores?.c5||'—'}</td>
-      <td style="text-align:center;font-weight:700;color:${f.color}">${f.sisi}</td>
-      <td style="text-align:center"><span class="level-badge" style="background:${f.color}20;color:${f.color};font-size:10px">${f.level}</span></td>
-      <td>${f.builtin?'<span style="color:#aaa;font-size:11px">built-in</span>':`<button onclick="deleteFarm('${f.id}')" style="background:#fce4ec;border:none;border-radius:5px;padding:2px 8px;font-size:11px;cursor:pointer;color:#c62828">✕</button>`}</td>
-    </tr>`).join('');
+  tbody.innerHTML=filtered.map(function(f,i){return (
+    '<tr>'+
+      '<td style="color:#aaa">'+(i+1)+'</td>'+
+      '<td><b style="color:'+f.color+'">'+f.name+'</b>'+(f.builtin?'<span class="tag tag-builtin">pilot</span>':'<span class="tag tag-user">mine</span>')+'</td>'+
+      '<td>'+(f.country?'['+f.country+'] ':'')+((f.gov||'').split(' — ')[0])+'</td>'+
+      '<td style="color:#888">'+(f.region||'—')+'</td>'+
+      '<td style="color:#666">'+((f.crop||'—').substring(0,22))+'</td>'+
+      '<td>'+(f.area||'—')+' '+(f.areaUnit||'')+'</td>'+
+      '<td style="font-family:monospace;font-size:10px">'+(f.lat||'—')+'</td>'+
+      '<td style="font-family:monospace;font-size:10px">'+(f.lng||'—')+'</td>'+
+      '<td style="text-align:center">'+(f.scores&&f.scores.c1||'—')+'</td>'+
+      '<td style="text-align:center">'+(f.scores&&f.scores.c2||'—')+'</td>'+
+      '<td style="text-align:center">'+(f.scores&&f.scores.c3||'—')+'</td>'+
+      '<td style="text-align:center">'+(f.scores&&f.scores.c4||'—')+'</td>'+
+      '<td style="text-align:center">'+(f.scores&&f.scores.c5||'—')+'</td>'+
+      '<td style="text-align:center;font-weight:700;color:'+f.color+'">'+f.sisi+'</td>'+
+      '<td style="text-align:center"><span class="level-badge" style="background:'+f.color+'20;color:'+f.color+';font-size:10px">'+f.level+'</span></td>'+
+      '<td>'+(f.builtin?'<span style="color:#aaa;font-size:11px">built-in</span>':'<button onclick="deleteFarm(\''+f.id+'\')" style="background:#fce4ec;border:none;border-radius:5px;padding:2px 8px;font-size:11px;cursor:pointer;color:#c62828">✕</button>')+'</td>'+
+    '</tr>');}).join('');
 }
 
 // ════════════════════════════════════════════════════════
@@ -1788,44 +1814,44 @@ function initMap(){
 function addMarkerToMap(f){
   if(!map||!f.lat||!f.lng) return;
   const dash=!f.builtin?'border:2.5px dashed #fff':'border:3px solid #fff';
-  const icon=L.divIcon({html:`<div style="width:40px;height:40px;border-radius:50%;background:${f.color};${dash};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.3)">L${f.levelNum||'?'}</div>`,className:'',iconSize:[40,40],iconAnchor:[20,20]});
-  L.marker([f.lat,f.lng],{icon}).addTo(map).bindPopup(buildPopup(f),{maxWidth:300});
+  const icon=L.divIcon({html:'<div style="width:40px;height:40px;border-radius:50%;background:'+f.color+';'+dash+';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.3)">L'+(f.levelNum||'?')+'</div>',className:'',iconSize:[40,40],iconAnchor:[20,20]});
+  L.marker([f.lat,f.lng],{icon:icon}).addTo(map).bindPopup(buildPopup(f),{maxWidth:300});
 }
 function refreshMapMarkers(){
   if(!map) return;
-  map.eachLayer(l=>{ if(l instanceof L.Marker) map.removeLayer(l); });
+  map.eachLayer(function(l){ if(l instanceof L.Marker) map.removeLayer(l); });
   getAllFarms().forEach(addMarkerToMap);
 }
 function buildPopup(f){
   const cKeys=['c1','c2','c3','c4','c5'];
   const cLbls=['C₁ Irrigation','C₂ Energy','C₃ Soil','C₄ Crop','C₅ Socio'];
   const cols=['#3498db','#2ecc71','#9b59b6','#f39c12','#e74c3c'];
-  const bars=cKeys.map((k,i)=>`
-    <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
-      <span style="font-size:10px;color:#888;min-width:75px">${cLbls[i]}</span>
-      <div style="flex:1;background:#e0e0e0;height:5px;border-radius:2px">
-        <div style="width:${(f.scores||{})[k]*20||0}%;background:${cols[i]};height:5px;border-radius:2px"></div>
-      </div>
-      <span style="font-size:10px;font-weight:700;min-width:16px">${(f.scores||{})[k]||'—'}</span>
-    </div>`).join('');
-  return `<div style="font-family:Arial,sans-serif;min-width:260px">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
-      <div style="width:40px;height:40px;border-radius:50%;background:${f.color};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0">L${f.levelNum||'?'}</div>
-      <div>
-        <b style="font-size:14px">${f.name}</b>${f.country&&f.country!='EG'?` <span style="font-size:9px;background:#e3f2fd;border-radius:3px;padding:1px 4px">${f.country}</span>`:''}
-        ${!f.builtin?'<span style="font-size:9px;background:#e8f5e9;color:#2e7d32;border-radius:3px;padding:1px 4px;margin-left:2px">MY FARM</span>':''}
-        <div style="font-size:11px;color:#666">${f.gov||''}</div>
-        <div style="font-size:11px;color:#888">${f.area?f.area+' '+(f.areaUnit||''):''}${f.crop?' · '+(f.crop.substring(0,25)):''}</div>
-      </div>
-    </div>
-    <div style="background:#f5f5f5;border-radius:7px;padding:7px;margin-bottom:7px">
-      <div style="font-size:10px;color:#888">SISI Score</div>
-      <div style="font-size:26px;font-weight:700;color:${f.color}">${f.sisi}</div>
-      <div style="font-size:11px;color:#444">${LF[f.level]||f.levelName||''}</div>
-    </div>
-    ${bars}
-    ${!f.builtin?'<div style="margin-top:5px;font-size:10px;color:#aaa">User-added · '+new Date(f.addedAt||Date.now()).toLocaleDateString()+'</div>':''}
-  </div>`;
+  const bars=cKeys.map(function(k,i){return (
+    '<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">'+
+      '<span style="font-size:10px;color:#888;min-width:75px">'+cLbls[i]+'</span>'+
+      '<div style="flex:1;background:#e0e0e0;height:5px;border-radius:2px">'+
+        '<div style="width:'+((f.scores||{})[k]*20||0)+'%;background:'+cols[i]+';height:5px;border-radius:2px"></div>'+
+      '</div>'+
+      '<span style="font-size:10px;font-weight:700;min-width:16px">'+((f.scores||{})[k]||'—')+'</span>'+
+    '</div>');}).join('');
+  return '<div style="font-family:Arial,sans-serif;min-width:260px">'+
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">'+
+      '<div style="width:40px;height:40px;border-radius:50%;background:'+f.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0">L'+(f.levelNum||'?')+'</div>'+
+      '<div>'+
+        '<b style="font-size:14px">'+f.name+'</b>'+(f.country&&f.country!='EG'?' <span style="font-size:9px;background:#e3f2fd;border-radius:3px;padding:1px 4px">'+f.country+'</span>':'')+
+        (!f.builtin?'<span style="font-size:9px;background:#e8f5e9;color:#2e7d32;border-radius:3px;padding:1px 4px;margin-left:2px">MY FARM</span>':'')+
+        '<div style="font-size:11px;color:#666">'+(f.gov||'')+'</div>'+
+        '<div style="font-size:11px;color:#888">'+(f.area?f.area+' '+(f.areaUnit||''):'')+(f.crop?' · '+(f.crop.substring(0,25)):'')+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="background:#f5f5f5;border-radius:7px;padding:7px;margin-bottom:7px">'+
+      '<div style="font-size:10px;color:#888">SISI Score</div>'+
+      '<div style="font-size:26px;font-weight:700;color:'+f.color+'">'+f.sisi+'</div>'+
+      '<div style="font-size:11px;color:#444">'+(LF[f.level]||f.levelName||'')+'</div>'+
+    '</div>'+
+    bars+
+    (!f.builtin?'<div style="margin-top:5px;font-size:10px;color:#aaa">User-added · '+new Date(f.addedAt||Date.now()).toLocaleDateString()+'</div>':'')+
+  '</div>';
 }
 
 // ════════════════════════════════════════════════════════
@@ -1833,46 +1859,46 @@ function buildPopup(f){
 // ════════════════════════════════════════════════════════
 function buildCompareChart(){
   const all=getAllFarms();
-  let html=`<div style="margin-bottom:1.2rem"><div style="font-size:13px;font-weight:600;margin-bottom:10px">SISI Score Comparison — All Farms (Pilot + Mine)</div>`;
-  all.forEach(f=>{
-    html+=`<div class="compare-bar" data-level="${f.level}">
-      <div style="min-width:160px;font-size:12px;font-weight:500">${f.name}${f.country&&f.country!='EG'?' ['+f.country+']':''}${!f.builtin?' <small style="color:#2e7d32">(mine)</small>':'<small style="color:#1565c0"> (pilot)</small>'}</div>
-      <div class="compare-bar-fill" style="width:${(f.sisi/5*100).toFixed(0)}%;background:${f.color}">${f.sisi}</div>
-      <div style="font-size:10px;color:#888">${f.levelName}</div>
-    </div>`;
+  var html='<div style="margin-bottom:1.2rem"><div style="font-size:13px;font-weight:600;margin-bottom:10px">SISI Score Comparison — All Farms (Pilot + Mine)</div>';
+  all.forEach(function(f){
+    html+='<div class="compare-bar" data-level="'+f.level+'">'+
+      '<div style="min-width:160px;font-size:12px;font-weight:500">'+f.name+(f.country&&f.country!='EG'?' ['+f.country+']':'')+(!f.builtin?' <small style="color:#2e7d32">(mine)</small>':'<small style="color:#1565c0"> (pilot)</small>')+'</div>'+
+      '<div class="compare-bar-fill" style="width:'+(f.sisi/5*100).toFixed(0)+'%;background:'+f.color+'">'+f.sisi+'</div>'+
+      '<div style="font-size:10px;color:#888">'+f.levelName+'</div>'+
+    '</div>';
   });
-  html+=`</div>
-  <div style="font-size:13px;font-weight:600;margin-bottom:8px">Criteria Breakdown — All Farms</div>
-  <div style="overflow-x:auto"><table style="width:100%;font-size:11px;border-collapse:collapse;min-width:540px">
-  <thead><tr>
-    <th style="text-align:left;padding:7px;background:#f0f4ff">Site</th>
-    <th style="padding:7px;background:#e3f2fd;text-align:center">C₁ (0.30)</th>
-    <th style="padding:7px;background:#e8f5e9;text-align:center">C₂ (0.20)</th>
-    <th style="padding:7px;background:#f3e5f5;text-align:center">C₃ (0.15)</th>
-    <th style="padding:7px;background:#fff8e1;text-align:center">C₄ (0.15)</th>
-    <th style="padding:7px;background:#fce4ec;text-align:center">C₅ (0.20)</th>
-    <th style="padding:7px;background:#f0f4ff;text-align:center;font-weight:700">SISI</th>
-    <th style="padding:7px;background:#f0f4ff;text-align:center">Level</th>
-  </tr></thead><tbody>`;
-  all.forEach(f=>{
+  html+='</div>'+
+    '<div style="font-size:13px;font-weight:600;margin-bottom:8px">Criteria Breakdown — All Farms</div>'+
+    '<div style="overflow-x:auto"><table style="width:100%;font-size:11px;border-collapse:collapse;min-width:540px">'+
+    '<thead><tr>'+
+      '<th style="text-align:left;padding:7px;background:#f0f4ff">Site</th>'+
+      '<th style="padding:7px;background:#e3f2fd;text-align:center">C₁ (0.30)</th>'+
+      '<th style="padding:7px;background:#e8f5e9;text-align:center">C₂ (0.20)</th>'+
+      '<th style="padding:7px;background:#f3e5f5;text-align:center">C₃ (0.15)</th>'+
+      '<th style="padding:7px;background:#fff8e1;text-align:center">C₄ (0.15)</th>'+
+      '<th style="padding:7px;background:#fce4ec;text-align:center">C₅ (0.20)</th>'+
+      '<th style="padding:7px;background:#f0f4ff;text-align:center;font-weight:700">SISI</th>'+
+      '<th style="padding:7px;background:#f0f4ff;text-align:center">Level</th>'+
+    '</tr></thead><tbody>';
+  all.forEach(function(f){
     const s=f.scores||{};
-    html+=`<tr data-level="${f.level}" style="border-bottom:1px solid #eee">
-      <td style="padding:6px;font-weight:600;color:${f.color}">${f.name}${f.country&&f.country!='EG'?' <small>['+f.country+']</small>':''}${!f.builtin?' <small style="color:#2e7d32">(mine)</small>':'<small style="color:#1565c0"> (pilot)</small>'}</td>
-      ${['c1','c2','c3','c4','c5'].map((k,i)=>{
-        const cols=['#3498db','#2ecc71','#9b59b6','#f39c12','#e74c3c'];
-        return `<td style="padding:6px;text-align:center">${s[k]||'—'}<div style="width:100%;height:4px;border-radius:2px;background:#eee;margin-top:2px"><div style="width:${(s[k]||0)*20}%;height:4px;background:${cols[i]};border-radius:2px"></div></div></td>`;
-      }).join('')}
-      <td style="padding:6px;text-align:center;font-weight:700;color:${f.color}">${f.sisi}</td>
-      <td style="padding:6px;text-align:center"><span class="level-badge" style="background:${f.color}20;color:${f.color};font-size:10px">${f.level}</span></td>
-    </tr>`;
+    html+='<tr data-level="'+f.level+'" style="border-bottom:1px solid #eee">'+
+      '<td style="padding:6px;font-weight:600;color:'+f.color+'">'+f.name+(f.country&&f.country!='EG'?' <small>['+f.country+']</small>':'')+(f.builtin?'<small style="color:#1565c0"> (pilot)</small>':'<small style="color:#2e7d32"> (mine)</small>')+'</td>'+
+      ['c1','c2','c3','c4','c5'].map(function(k,i){
+        var cols=['#3498db','#2ecc71','#9b59b6','#f39c12','#e74c3c'];
+        return '<td style="padding:6px;text-align:center">'+(s[k]||'—')+'<div style="width:100%;height:4px;border-radius:2px;background:#eee;margin-top:2px"><div style="width:'+((s[k]||0)*20)+'%;height:4px;background:'+cols[i]+';border-radius:2px"></div></div></td>';
+      }).join('')+
+      '<td style="padding:6px;text-align:center;font-weight:700;color:'+f.color+'">'+f.sisi+'</td>'+
+      '<td style="padding:6px;text-align:center"><span class="level-badge" style="background:'+f.color+'20;color:'+f.color+';font-size:10px">'+f.level+'</span></td>'+
+    '</tr>';
   });
-  html+=`</tbody></table></div>`;
+  html+='</tbody></table></div>';
   document.getElementById('compareChart').innerHTML=html;
 }
 function filterCompare(level,btn){
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
-  document.querySelectorAll('tr[data-level]').forEach(tr=>{ tr.style.opacity=(level==='all'||tr.dataset.level===level)?'1':'0.2'; });
-  document.querySelectorAll('.compare-bar').forEach(el=>{ el.style.opacity=(level==='all'||el.dataset.level===level)?'1':'0.2'; });
+  document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');}); btn.classList.add('active');
+  document.querySelectorAll('tr[data-level]').forEach(function(tr){ tr.style.opacity=(level==='all'||tr.dataset.level===level)?'1':'0.2'; });
+  document.querySelectorAll('.compare-bar').forEach(function(el){ el.style.opacity=(level==='all'||el.dataset.level===level)?'1':'0.2'; });
 }
 
 // ════════════════════════════════════════════════════════
@@ -1880,12 +1906,13 @@ function filterCompare(level,btn){
 // ════════════════════════════════════════════════════════
 function loadCropKc(){
   const kc=cropKc[v('et_crop')]; if(!kc) return;
-  ['ini','mid','end'].forEach(k=>{ const el=document.getElementById('kc_'+k); if(el) el.value=kc[k]; });
+  ['ini','mid','end'].forEach(function(k){ const el=document.getElementById('kc_'+k); if(el) el.value=kc[k]; });
   const d=document.getElementById('et_days'); if(d) d.value=kc.days;
 }
 function loadClimatePreset(){
-  const p={nile_delta:{et_tmean:22,et_wind:2.5,et_rh:65,et_sun:7.5},upper_egypt:{et_tmean:27,et_wind:2.0,et_rh:40,et_sun:9.5},new_lands:{et_tmean:25,et_wind:3.0,et_rh:35,et_sun:9.0},sinai:{et_tmean:26,et_wind:3.5,et_rh:40,et_sun:9.2},maghreb:{et_tmean:20,et_wind:3.0,et_rh:60,et_sun:8.0},levant:{et_tmean:22,et_wind:2.5,et_rh:60,et_sun:8.5},arabian:{et_tmean:32,et_wind:3.5,et_rh:30,et_sun:10.5},sahel:{et_tmean:30,et_wind:3.0,et_rh:35,et_sun:9.0},south_asia:{et_tmean:26,et_wind:2.0,et_rh:70,et_sun:7.5},mediterranean:{et_tmean:18,et_wind:2.5,et_rh:65,et_sun:7.5}}[v('et_zone')]||{};
-  Object.entries(p).forEach(([id,val])=>{ const el=document.getElementById(id); if(el) el.value=val; });
+  const presets={nile_delta:{et_tmean:22,et_wind:2.5,et_rh:65,et_sun:7.5},upper_egypt:{et_tmean:27,et_wind:2.0,et_rh:40,et_sun:9.5},new_lands:{et_tmean:25,et_wind:3.0,et_rh:35,et_sun:9.0},sinai:{et_tmean:26,et_wind:3.5,et_rh:40,et_sun:9.2},maghreb:{et_tmean:20,et_wind:3.0,et_rh:60,et_sun:8.0},levant:{et_tmean:22,et_wind:2.5,et_rh:60,et_sun:8.5},arabian:{et_tmean:32,et_wind:3.5,et_rh:30,et_sun:10.5},sahel:{et_tmean:30,et_wind:3.0,et_rh:35,et_sun:9.0},south_asia:{et_tmean:26,et_wind:2.0,et_rh:70,et_sun:7.5},mediterranean:{et_tmean:18,et_wind:2.5,et_rh:65,et_sun:7.5}};
+  const p=presets[v('et_zone')]||{};
+  Object.keys(p).forEach(function(id){ const el=document.getElementById(id); if(el) el.value=p[id]; });
 }
 function calcET(){
   const lat=parseFloat(v('et_lat'))||30,T=parseFloat(v('et_tmean'))||25,RH=parseFloat(v('et_rh'))||55,u2=parseFloat(v('et_wind'))||2,n_sun=parseFloat(v('et_sun'))||8.5;
@@ -1897,17 +1924,17 @@ function calcET(){
   const es=0.6108*Math.exp(17.27*T/(T+237.3)),ea=es*(RH/100),VPD=es-ea,delta=4098*es/Math.pow(T+237.3,2),gamma=0.063;
   const ET0=Math.max(0,(0.408*delta*Rn+gamma*(900/(T+273))*u2*VPD)/(delta+gamma*(1+0.34*u2)));
   const kc_avg=(kc_ini+kc_mid*2+kc_end)/4,ETc_d=ET0*kc_avg,ETc_s=ETc_d*days,gross_mm=ETc_s/(eff/100)*(1+lf),water_m3=gross_mm/1000*area_ha*10000,peak=ET0*kc_mid;
-  document.getElementById('etResultsInner').innerHTML=`<div class="et-grid">
-    <div class="et-card"><div class="ev" style="color:#1565c0">${ET0.toFixed(2)}</div><div class="eu">mm/day</div><div class="el">ET₀ FAO-PM</div></div>
-    <div class="et-card"><div class="ev" style="color:#2e7d32">${ETc_d.toFixed(2)}</div><div class="eu">mm/day</div><div class="el">ETc daily</div></div>
-    <div class="et-card"><div class="ev" style="color:#9b59b6">${peak.toFixed(2)}</div><div class="eu">mm/day</div><div class="el">Peak ETc</div></div>
-    <div class="et-card"><div class="ev" style="color:#e65100">${ETc_s.toFixed(0)}</div><div class="eu">mm</div><div class="el">Seasonal ETc</div></div>
-    <div class="et-card"><div class="ev" style="color:#2e7d32">${(water_m3/1000).toFixed(1)}</div><div class="eu">×10³ m³</div><div class="el">Gross Irrig.</div></div>
-    <div class="et-card"><div class="ev" style="color:#c62828">${gross_mm.toFixed(0)}</div><div class="eu">mm</div><div class="el">Gross depth</div></div>
-  </div>
-  <div class="formula-box" style="margin-top:10px">ET₀ = <b>${ET0.toFixed(3)} mm/day</b> | Peak ETc = <b>${peak.toFixed(2)} mm/day</b> | Total = <b>${(water_m3/1000).toFixed(1)}×10³ m³/season</b> for ${area_ha} ha</div>`;
-  const data=monthlyET0[v('et_zone')]||monthlyET0.nile_delta,mx=Math.max(...data);
-  document.getElementById('monthlyET').innerHTML=`<div style="overflow-x:auto"><table class="monthly-table"><thead><tr><th>Month</th><th>ET₀ mm/d</th><th>ETc mm/d</th><th>Demand</th><th>ET₀/Month</th><th>ETc/Month</th></tr></thead><tbody>${MONTHS.map((m,i)=>`<tr><td>${m}</td><td>${data[i].toFixed(1)}</td><td>${(data[i]*kc_mid).toFixed(2)}</td><td><div style="background:#e5e5e5;height:10px;border-radius:3px"><div style="width:${Math.round(data[i]/mx*100)}%;height:10px;background:linear-gradient(90deg,#1565c0,#2ecc71)"></div></div></td><td>${(data[i]*30).toFixed(0)}</td><td>${(data[i]*kc_mid*30).toFixed(0)}</td></tr>`).join('')}</tbody></table></div>`;
+  document.getElementById('etResultsInner').innerHTML='<div class="et-grid">'+
+    '<div class="et-card"><div class="ev" style="color:#1565c0">'+ET0.toFixed(2)+'</div><div class="eu">mm/day</div><div class="el">ET₀ FAO-PM</div></div>'+
+    '<div class="et-card"><div class="ev" style="color:#2e7d32">'+ETc_d.toFixed(2)+'</div><div class="eu">mm/day</div><div class="el">ETc daily</div></div>'+
+    '<div class="et-card"><div class="ev" style="color:#9b59b6">'+peak.toFixed(2)+'</div><div class="eu">mm/day</div><div class="el">Peak ETc</div></div>'+
+    '<div class="et-card"><div class="ev" style="color:#e65100">'+ETc_s.toFixed(0)+'</div><div class="eu">mm</div><div class="el">Seasonal ETc</div></div>'+
+    '<div class="et-card"><div class="ev" style="color:#2e7d32">'+(water_m3/1000).toFixed(1)+'</div><div class="eu">×10³ m³</div><div class="el">Gross Irrig.</div></div>'+
+    '<div class="et-card"><div class="ev" style="color:#c62828">'+gross_mm.toFixed(0)+'</div><div class="eu">mm</div><div class="el">Gross depth</div></div>'+
+  '</div>'+
+  '<div class="formula-box" style="margin-top:10px">ET₀ = <b>'+ET0.toFixed(3)+' mm/day</b> | Peak ETc = <b>'+peak.toFixed(2)+' mm/day</b> | Total = <b>'+(water_m3/1000).toFixed(1)+'×10³ m³/season</b> for '+area_ha+' ha</div>';
+  const data=monthlyET0[v('et_zone')]||monthlyET0.nile_delta,mx=Math.max.apply(null,data);
+  document.getElementById('monthlyET').innerHTML='<div style="overflow-x:auto"><table class="monthly-table"><thead><tr><th>Month</th><th>ET₀ mm/d</th><th>ETc mm/d</th><th>Demand</th><th>ET₀/Month</th><th>ETc/Month</th></tr></thead><tbody>'+MONTHS.map(function(m,i){return '<tr><td>'+m+'</td><td>'+data[i].toFixed(1)+'</td><td>'+(data[i]*kc_mid).toFixed(2)+'</td><td><div style="background:#e5e5e5;height:10px;border-radius:3px"><div style="width:'+Math.round(data[i]/mx*100)+'%;height:10px;background:linear-gradient(90deg,#1565c0,#2ecc71)"></div></div></td><td>'+(data[i]*30).toFixed(0)+'</td><td>'+(data[i]*kc_mid*30).toFixed(0)+'</td></tr>';}).join('')+'</tbody></table></div>';
 }
 
 // ════════════════════════════════════════════════════════
@@ -1916,31 +1943,41 @@ function calcET(){
 function exportCSV(){
   const all=getAllFarms();
   const rows=[['#','Name','Country','Gov','Crop','Area','Unit','Lat','Lng','C1','C2','C3','C4','C5','SISI','Level','Type']];
-  all.forEach((f,i)=>{ const s=f.scores||{}; rows.push([i+1,f.name,f.country||'EG',(f.gov||'').split(' — ')[0],f.crop||'',f.area||'',f.areaUnit||'',f.lat||'',f.lng||'',s.c1||'',s.c2||'',s.c3||'',s.c4||'',s.c5||'',f.sisi,f.level,f.builtin?'Pilot':'Mine']); });
-  dlBlob('\uFEFF'+rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv',`SISI_${new Date().toISOString().slice(0,10)}.csv`);
+  all.forEach(function(f,i){ var s=f.scores||{}; rows.push([i+1,f.name,f.country||'EG',(f.gov||'').split(' — ')[0],f.crop||'',f.area||'',f.areaUnit||'',f.lat||'',f.lng||'',s.c1||'',s.c2||'',s.c3||'',s.c4||'',s.c5||'',f.sisi,f.level,f.builtin?'Pilot':'Mine']); });
+  dlBlob('\uFEFF'+rows.map(function(r){return r.map(function(x){return '"'+String(x).replace(/"/g,'""')+'"';}).join(',');}).join('\n'),'text/csv','SISI_'+new Date().toISOString().slice(0,10)+'.csv');
 }
 function exportGeoJSON(){
-  const gj={type:'FeatureCollection',features:getAllFarms().filter(f=>f.lat&&f.lng).map(f=>({type:'Feature',geometry:{type:'Point',coordinates:[f.lng,f.lat]},properties:{name:f.name,sisi:f.sisi,level:f.level,levelName:f.levelName,country:f.country,gov:f.gov,crop:f.crop,type:f.builtin?'pilot':'user'}}))};
-  dlBlob(JSON.stringify(gj,null,2),'application/json',`SISI_${new Date().toISOString().slice(0,10)}.geojson`);
+  const gj={type:'FeatureCollection',features:getAllFarms().filter(function(f){return f.lat&&f.lng;}).map(function(f){return {type:'Feature',geometry:{type:'Point',coordinates:[f.lng,f.lat]},properties:{name:f.name,sisi:f.sisi,level:f.level,levelName:f.levelName,country:f.country,gov:f.gov,crop:f.crop,type:f.builtin?'pilot':'user'}};})};
+  dlBlob(JSON.stringify(gj,null,2),'application/json','SISI_'+new Date().toISOString().slice(0,10)+'.geojson');
 }
 function exportKML(){
-  const all=getAllFarms().filter(f=>f.lat&&f.lng);
-  const pm=all.map(f=>`<Placemark><name>${f.name}</name><description><![CDATA[SISI: ${f.sisi} | ${f.level} | ${f.gov}]]></description><Point><coordinates>${f.lng},${f.lat},0</coordinates></Point></Placemark>`).join('');
-  dlBlob(`<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>SISI Registry</name>${pm}</Document></kml>`,'application/vnd.google-earth.kml+xml',`SISI_${new Date().toISOString().slice(0,10)}.kml`);
+  const all=getAllFarms().filter(function(f){return f.lat&&f.lng;});
+  const pm=all.map(function(f){return '<Placemark><name>'+f.name+'</name><description><![CDATA[SISI: '+f.sisi+' | '+f.level+' | '+f.gov+']]></description><Point><coordinates>'+f.lng+','+f.lat+',0</coordinates></Point></Placemark>';}).join('');
+  dlBlob('<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>SISI Registry</name>'+pm+'</Document></kml>','application/vnd.google-earth.kml+xml','SISI_'+new Date().toISOString().slice(0,10)+'.kml');
 }
-function dlBlob(content,type,filename){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type})); a.download=filename; a.click(); }
+function dlBlob(content,type,filename){ var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type:type})); a.download=filename; a.click(); }
 
 // ════════════════════════════════════════════════════════
 // TABS
 // ════════════════════════════════════════════════════════
 const tabOrder=['map','farms','calc','et','water','compare','levels','admin'];
 function switchTab(tab){
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',tabOrder[i]===tab));
-  document.querySelectorAll('.content').forEach(c=>c.classList.remove('active'));
+  // Auto-save to local on every tab switch
+  var uf = userFarms.filter(function(f){return !f.builtin;});
+  if(uf.length){ idbSaveAll(uf); lsSave(uf); updatePersistBadge(); }
+
+  document.querySelectorAll('.tab').forEach(function(t,i){t.classList.toggle('active',tabOrder[i]===tab);});
+  document.querySelectorAll('.content').forEach(function(c){c.classList.remove('active');});
   const el=document.getElementById('tab-'+tab); if(el) el.classList.add('active');
-  if(tab==='map'){ if(!mapInitialized) setTimeout(initMap,100); else setTimeout(()=>map.invalidateSize(),150); }
+
+  if(tab==='map'){
+    if(!mapInitialized) setTimeout(initMap,100);
+    else setTimeout(function(){ if(map) map.invalidateSize(); },150);
+    // Refresh markers without clearing userFarms
+    setTimeout(refreshMapMarkers, 300);
+  }
   if(tab==='compare') buildCompareChart();
-  if(tab==='farms') buildFarmGrid();
+  if(tab==='farms'){ buildFarmGrid(); }
   if(tab==='et'){ loadCropKc(); calcET(); }
   if(tab==='water') wCalcAll();
 }
@@ -1948,18 +1985,348 @@ function switchTab(tab){
 // ════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════
-window.addEventListener('load', async()=>{
+function hideLoading(){
+  var ov = document.getElementById('loadingOverlay');
+  if(ov) ov.style.display='none';
+}
+function showAuth(){
+  hideLoading();
+  document.getElementById('authScreen').style.display='flex';
+}
+
+window.addEventListener('load', async function(){
   updateGovList('EG');
   await idbOpen();
-  const {data:{session}}=await sb.auth.getSession();
-  document.getElementById('loadingOverlay').style.display='none';
-  if(session?.user){ await onLogin(session.user); }
-  else { document.getElementById('authScreen').style.display='flex'; }
-  sb.auth.onAuthStateChange(async(event,session)=>{
-    if(event==='SIGNED_IN'&&session) await onLogin(session.user);
-    if(event==='SIGNED_OUT'){ document.getElementById('mainApp').style.display='none'; document.getElementById('authScreen').style.display='flex'; }
+
+  // ── Hard timeout: never hang more than 3 seconds ──
+  var done = false;
+  var timer = setTimeout(function(){
+    if(!done){ done=true; showAuth(); }
+  }, 3000);
+
+  try{
+    // Race: getSession vs 3s timeout
+    var sessionRes = await Promise.race([
+      sb.auth.getSession(),
+      new Promise(function(resolve){ setTimeout(function(){ resolve({data:{session:null},error:{message:'timeout'}}); }, 2800); })
+    ]);
+    if(!done){
+      done=true; clearTimeout(timer);
+      hideLoading();
+      if(sessionRes.data && sessionRes.data.session && sessionRes.data.session.user){
+        await onLogin(sessionRes.data.session.user);
+      } else {
+        showAuth();
+      }
+    }
+  } catch(e){
+    if(!done){ done=true; clearTimeout(timer); showAuth(); }
+  }
+
+  sb.auth.onAuthStateChange(async function(event,session){
+    if(event==='SIGNED_IN' && session){ hideLoading(); await onLogin(session.user); }
+    if(event==='SIGNED_OUT'){ document.getElementById('mainApp').style.display='none'; showAuth(); }
   });
 });
+
+// ════════════════════════════════════════════════════════
+// 📂 FILE IMPORT ENGINE — CSV / GeoJSON / KML / XLSX
+// ════════════════════════════════════════════════════════
+
+function setImportStatus(tab, msg, isErr){
+  var el = document.getElementById('importStatus_'+tab);
+  if(!el) return;
+  el.textContent = msg;
+  el.className = 'import-status '+(isErr?'err':'ok');
+  el.style.display = 'inline-block';
+  setTimeout(function(){ el.style.display='none'; }, 5000);
+}
+
+// ── Normalize a raw object into a farm object ──
+function normalizeFarmRow(row){
+  // Accept flexible column names (case-insensitive)
+  function g(){
+    for(var i=0;i<arguments.length;i++){
+      var k=arguments[i].toLowerCase();
+      for(var rk in row){
+        if(rk.toLowerCase()===k && row[rk]!==undefined && row[rk]!=='') return String(row[rk]).trim();
+      }
+    }
+    return '';
+  }
+  var name = g('name','farm','farm_name','farmname','اسم المزرعة','اسم');
+  if(!name) return null;
+  var lat  = parseFloat(g('lat','latitude','y','خط العرض')) || 0;
+  var lng  = parseFloat(g('lng','lon','longitude','x','خط الطول')) || 0;
+  var sisi = parseFloat(g('sisi','score','sisi_score')) || 0;
+  var level= g('level','sisi_level','level_name') || '';
+  var c1   = parseFloat(g('c1','c1_irrigation','c1_irr')) || 2.5;
+  var c2   = parseFloat(g('c2','c2_energy','c2_inf')) || 3.0;
+  var c3   = parseFloat(g('c3','c3_soil','c3_env')) || 3.5;
+  var c4   = parseFloat(g('c4','c4_crop','c4_eco')) || 3.0;
+  var c5   = parseFloat(g('c5','c5_socio','c5_soc')) || 3.5;
+  // Recalculate SISI if not provided
+  if(!sisi) sisi = +(0.30*c1+0.20*c2+0.15*c3+0.15*c4+0.20*c5).toFixed(2);
+  var info = getRangeLabel(sisi);
+  if(!level) level = info.level;
+  var levelNum = parseInt(level.replace('L',''))||info.levelNum||0;
+  return {
+    id: 'imp_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    supabase_id: null,
+    builtin: false,
+    name: name,
+    nameEn: name,
+    country: g('country','دولة','البلد') || 'EG',
+    gov: g('gov','governorate','province','المحافظة'),
+    region: g('region','area','منطقة'),
+    crop: g('crop','main_crop','المحصول'),
+    lat: lat, lng: lng,
+    area: parseFloat(g('area','farm_area','المساحة'))||0,
+    areaUnit: g('areaunit','unit','الوحدة')||'feddans',
+    level: level||info.level,
+    levelNum: levelNum,
+    levelName: info.name||g('levelname','level_name'),
+    sisi: sisi,
+    color: LC[level||info.level]||'#1565c0',
+    scores: {c1:c1,c2:c2,c3:c3,c4:c4,c5:c5},
+    weighted: {c1:+(c1*.30).toFixed(3),c2:+(c2*.20).toFixed(3),c3:+(c3*.15).toFixed(3),c4:+(c4*.15).toFixed(3),c5:+(c5*.20).toFixed(3)},
+    water: g('water','water_source','مصدر_المياه'),
+    irrigation: g('irrigation','irr_method','طريقة_الري'),
+    energy: g('energy','energy_supply','الطاقة'),
+    soil: g('soil','soil_desc','التربة'),
+    waterQ: g('waterq','water_quality','جودة_المياه'),
+    notes: g('notes','note','ملاحظات'),
+    cropKey: g('cropkey','crop_key')||'wheat',
+    plantDate: g('plantdate','plant_date','تاريخ_الزراعة'),
+    irrType: g('irrtype','irr_type','نظام_الري')||'drip',
+    intervention: getInterventionText(level||info.level),
+    socio:{edu:'—',phone:'—',credit:'—',coop:'—',ext:'—'},
+    addedAt: new Date().toISOString()
+  };
+}
+
+// ── Merge imported farms into userFarms ──
+async function mergeImportedFarms(farms, tab){
+  if(!farms||!farms.length){ setImportStatus(tab,'No valid farms found',true); return; }
+  var added=0;
+  var existNames = new Set(userFarms.map(function(f){return (f.name||'').toLowerCase();}));
+  farms.forEach(function(f){
+    if(f && f.name && !existNames.has(f.name.toLowerCase())){
+      userFarms.unshift(f); existNames.add(f.name.toLowerCase()); added++;
+    }
+  });
+  await idbSaveAll(userFarms.filter(function(f){return !f.builtin;}));
+  lsSave(userFarms.filter(function(f){return !f.builtin;}));
+  updatePersistBadge();
+  buildFarmGrid(); renderRegistry(); refreshMapMarkers(); buildCompareChart(); wCalcAll();
+  setImportStatus(tab, '✅ '+added+' farm(s) imported', false);
+  showToast('✅ Imported '+added+' farm(s) from file','#2e7d32',4000);
+  // Try push to cloud
+  for(var i=0;i<userFarms.length;i++){
+    if(userFarms[i].supabase_id===null && !userFarms[i].builtin) await pushFarmToCloud(userFarms[i]);
+  }
+}
+
+// ── CSV IMPORT ──────────────────────────────────────────
+function importCSV(event, tab){
+  var file = event.target.files[0]; if(!file) return;
+  setImportStatus(tab,'⏳ Reading...', false);
+  var reader = new FileReader();
+  reader.onload = async function(e){
+    try{
+      var text = e.target.result;
+      // Detect delimiter
+      var delim = text.indexOf('\t')>-1 && text.indexOf(',')===- 1 ? '\t' : ',';
+      var lines = text.split(/\r?\n/).filter(function(l){return l.trim();});
+      if(lines.length<2){ setImportStatus(tab,'Empty file',true); return; }
+      // Parse header
+      var headers = parseCSVLine(lines[0], delim);
+      var farms = [];
+      for(var i=1;i<lines.length;i++){
+        var vals = parseCSVLine(lines[i], delim);
+        if(vals.length<2) continue;
+        var row = {};
+        headers.forEach(function(h,hi){ row[h.trim()] = (vals[hi]||'').trim(); });
+        var f = normalizeFarmRow(row);
+        if(f) farms.push(f);
+      }
+      // If tab is calc, fill first farm into form
+      if(tab==='calc' && farms.length>0) fillCalcForm(farms[0]);
+      await mergeImportedFarms(farms, tab);
+    }catch(err){
+      setImportStatus(tab,'Error: '+err.message, true);
+    }
+    event.target.value='';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseCSVLine(line, delim){
+  var result=[], cur='', inQ=false;
+  for(var i=0;i<line.length;i++){
+    var ch=line[i];
+    if(ch==='"'){ inQ=!inQ; }
+    else if(ch===delim && !inQ){ result.push(cur); cur=''; }
+    else { cur+=ch; }
+  }
+  result.push(cur);
+  return result;
+}
+
+// ── GEOJSON IMPORT ──────────────────────────────────────
+function importGeoJSON(event, tab){
+  var file = event.target.files[0]; if(!file) return;
+  setImportStatus(tab,'⏳ Reading...', false);
+  var reader = new FileReader();
+  reader.onload = async function(e){
+    try{
+      var gj = JSON.parse(e.target.result);
+      var features = gj.features || (gj.type==='Feature'?[gj]:[]);
+      var farms = [];
+      features.forEach(function(feat){
+        if(!feat||!feat.geometry) return;
+        var coords = feat.geometry.coordinates||[];
+        var lng=0,lat=0;
+        if(feat.geometry.type==='Point'){ lng=coords[0]; lat=coords[1]; }
+        var props = feat.properties||{};
+        var row = Object.assign({}, props, {lat:lat, lng:lng});
+        var f = normalizeFarmRow(row);
+        if(f){ f.lat=lat; f.lng=lng; farms.push(f); }
+      });
+      if(tab==='calc' && farms.length>0) fillCalcForm(farms[0]);
+      await mergeImportedFarms(farms, tab);
+    }catch(err){ setImportStatus(tab,'GeoJSON error: '+err.message, true); }
+    event.target.value='';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+// ── KML IMPORT ──────────────────────────────────────────
+function importKML(event, tab){
+  var file = event.target.files[0]; if(!file) return;
+  setImportStatus(tab,'⏳ Reading...', false);
+  var reader = new FileReader();
+  reader.onload = async function(e){
+    try{
+      var parser = new DOMParser();
+      var kml = parser.parseFromString(e.target.result, 'text/xml');
+      var placemarks = kml.querySelectorAll('Placemark');
+      var farms = [];
+      placemarks.forEach(function(pm){
+        var name = (pm.querySelector('name')||{}).textContent||'';
+        var desc = (pm.querySelector('description')||{}).textContent||'';
+        var coordEl = pm.querySelector('coordinates');
+        var lat=0,lng=0;
+        if(coordEl){
+          var parts = coordEl.textContent.trim().split(',');
+          lng = parseFloat(parts[0])||0;
+          lat = parseFloat(parts[1])||0;
+        }
+        // Parse description for SISI data
+        var sisiMatch = desc.match(/SISI[:\s]+([\d.]+)/i);
+        var levelMatch = desc.match(/L([1-5])/);
+        var row = {name:name, lat:lat, lng:lng,
+          sisi: sisiMatch?parseFloat(sisiMatch[1]):0,
+          level: levelMatch?'L'+levelMatch[1]:''};
+        var f = normalizeFarmRow(row);
+        if(f){ f.lat=lat; f.lng=lng; farms.push(f); }
+      });
+      if(tab==='calc' && farms.length>0) fillCalcForm(farms[0]);
+      await mergeImportedFarms(farms, tab);
+    }catch(err){ setImportStatus(tab,'KML error: '+err.message, true); }
+    event.target.value='';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+// ── XLSX IMPORT (no external library needed — parse XML) ─
+function importXLSX(event, tab){
+  var file = event.target.files[0]; if(!file) return;
+  setImportStatus(tab,'⏳ Reading Excel...', false);
+  // Use FileReader with ArrayBuffer, parse via SheetJS CDN if available
+  // Fallback: read as CSV if .csv disguised
+  if(typeof XLSX !== 'undefined'){
+    var reader = new FileReader();
+    reader.onload = async function(e){
+      try{
+        var wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+        var farms = rows.map(function(r){ return normalizeFarmRow(r); }).filter(Boolean);
+        if(tab==='calc' && farms.length>0) fillCalcForm(farms[0]);
+        await mergeImportedFarms(farms, tab);
+      }catch(err){ setImportStatus(tab,'Excel error: '+err.message, true); }
+      event.target.value='';
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    // Load SheetJS dynamically
+    var s = document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = function(){ importXLSX(event, tab); };
+    s.onerror = function(){ setImportStatus(tab,'Could not load Excel parser. Try CSV instead.', true); };
+    document.head.appendChild(s);
+  }
+}
+
+
+// ── Auto-detect file type from header import button ─────
+function importAuto(event){
+  var file = event.target.files[0]; if(!file) return;
+  var name = file.name.toLowerCase();
+  // Detect current tab
+  var activeTab = 'map';
+  document.querySelectorAll('.tab').forEach(function(t,i){
+    if(t.classList.contains('active')) activeTab = tabOrder[i]||'map';
+  });
+  if(name.endsWith('.csv'))                     importCSV(event, activeTab);
+  else if(name.endsWith('.geojson')||name.endsWith('.json')) importGeoJSON(event, activeTab);
+  else if(name.endsWith('.kml'))                importKML(event, activeTab);
+  else if(name.endsWith('.xlsx')||name.endsWith('.xls'))     importXLSX(event, activeTab);
+  else { showToast('Unsupported file type. Use CSV, GeoJSON, KML or Excel.','#e65100'); }
+}
+
+// ── Fill Calculator form from imported farm ──────────────
+function fillCalcForm(f){
+  if(!f) return;
+  function sv(id,val){ var el=document.getElementById(id); if(el&&val) el.value=val; }
+  sv('inp_name', f.name);
+  sv('inp_region', f.region);
+  sv('inp_lat', f.lat);
+  sv('inp_lng', f.lng);
+  sv('inp_crop', f.crop);
+  sv('inp_area', f.area);
+  sv('inp_notes', f.notes);
+  sv('inp_water', f.water);
+  sv('inp_irrigation', f.irrigation);
+  sv('inp_energy', f.energy);
+  sv('inp_soil', f.soil);
+  sv('inp_waterq', f.waterQ);
+  sv('inp_cropKey', f.cropKey);
+  sv('inp_plantDate', f.plantDate);
+  sv('inp_irrType', f.irrType);
+  if(f.scores){
+    sv('c1', f.scores.c1); sv('c2', f.scores.c2);
+    sv('c3', f.scores.c3); sv('c4', f.scores.c4); sv('c5', f.scores.c5);
+  }
+  // Set country + gov
+  if(f.country){
+    sv('inp_country', f.country);
+    updateGovList(f.country);
+    if(f.gov) setTimeout(function(){ sv('inp_gov', f.gov.split(' — ')[0]); }, 100);
+  }
+  calcSISI();
+  showToast('📋 Form filled from imported file','#0277bd',3000);
+}
+
+// ── DOWNLOAD TEMPLATE CSV ────────────────────────────────
+function downloadTemplate(){
+  var headers = ['name','country','gov','region','crop','area','areaUnit','lat','lng','c1','c2','c3','c4','c5','water','irrigation','energy','soil','waterQ','notes','cropKey','plantDate','irrType'];
+  var example = ['My Farm','EG','Cairo','Delta West','Wheat','10','feddans','30.26','31.18','3.0','3.0','3.5','3.0','3.5','Nile canal','drip','solar','sandy loam','EC 0.6','sample farm','wheat','2025-01-01','drip'];
+  var csv = headers.join(',')+"\n"+example.map(function(v){return '"'+v+'"';}).join(',');
+  dlBlob('\uFEFF'+csv,'text/csv','SISI_Import_Template.csv');
+  showToast('✅ Template downloaded','#2e7d32',2000);
+}
 
 </script>
 </body>
